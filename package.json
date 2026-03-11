@@ -29,6 +29,6 @@
     "aws4fetch": "^1.0.x",
     "chanfana": "^3.2.x",
     "hono": "^4.12.x",
-    "jose": "^6.1.x"
+    "jose": "^6.2.x"
   }
 }
