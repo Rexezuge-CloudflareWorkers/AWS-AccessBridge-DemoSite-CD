@@ -15,7 +15,7 @@
     "migrations:apply": "yes | wrangler d1 migrations apply --remote aws-access-bridge-db"
   },
   "devDependencies": {
-    "eslint": "^10.0.x",
+    "eslint": "^10.1.x",
     "eslint-config-prettier": "^10.1.x",
     "eslint-plugin-prettier": "^5.5.x",
     "globals": "^17.4.x",
