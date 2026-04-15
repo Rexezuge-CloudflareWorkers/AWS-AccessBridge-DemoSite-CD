@@ -56,17 +56,14 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      - name: Build Frontend
+        run: npm run build
+
       - name: Prepare for Deploy
         run: |
           # Hide OpenNext config so wrangler doesn't delegate to opennextjs-cloudflare
-          # (OpenNext build exceeds CI runner memory limits)
           mv open-next.config.ts open-next.config.ts.bak 2>/dev/null || true
           mv next.config.ts next.config.ts.bak 2>/dev/null || true
-
-          # Ensure the assets directory referenced in wrangler.jsonc exists
-          ASSETS_DIR=$(node -e "const p=require('jsonc-parser');const c=p.parse(require('fs').readFileSync('wrangler.jsonc','utf8'));console.log(c.assets?.directory||'./app/dist/')")
-          mkdir -p "$ASSETS_DIR"
-          echo '<!DOCTYPE html><html><head><title>AWS AccessBridge</title></head><body><p>Loading...</p></body></html>' > "$ASSETS_DIR/index.html"
 
       - name: Deploy with Wrangler
         run: npx wrangler deploy
