@@ -11,6 +11,7 @@ type View = 'accounts' | 'costs' | 'resources' | 'admin';
 export default function SpaApp() {
   const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [currentView, setCurrentView] = useState<View>('accounts');
   const [showHidden, setShowHidden] = useState(false);
@@ -45,9 +46,10 @@ export default function SpaApp() {
         if (response.status === 401) {
           setIsAuthorized(false);
         } else if (response.ok) {
-          const userData = (await response.json()) as { isSuperAdmin?: boolean; email?: string };
+          const userData = (await response.json()) as { isSuperAdmin?: boolean; email?: string; demoMode?: boolean };
           setIsAuthorized(true);
           setIsSuperAdmin(userData.isSuperAdmin || false);
+          setIsDemoMode(userData.demoMode || false);
           setUserEmail(userData.email || '');
         } else {
           setIsAuthorized(false);
@@ -86,6 +88,11 @@ export default function SpaApp() {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
+      {isDemoMode && (
+        <div className="bg-yellow-500 text-black text-center py-2 font-semibold text-sm sticky top-0 z-50">
+          Demo Mode — Data shown is for demonstration purposes only. Admin operations are disabled.
+        </div>
+      )}
       <SpaNavbar
         isSuperAdmin={isSuperAdmin}
         currentView={currentView}

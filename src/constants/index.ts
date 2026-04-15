@@ -1,5 +1,6 @@
 export * from './ConfigurationDefaults';
 export * from './Configurations';
+export * from './DemoMode';
 export * from './Headers';
 export * from './Hostnames';
 export * from './RoleSessionNames';

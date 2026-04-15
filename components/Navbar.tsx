@@ -4,12 +4,19 @@ import Link from 'next/link';
 
 interface NavbarProps {
   isSuperAdmin?: boolean;
+  isDemoMode?: boolean;
   currentView?: 'accounts' | 'costs' | 'resources' | 'admin';
   userEmail?: string;
 }
 
-export default function Navbar({ isSuperAdmin = false, currentView = 'accounts', userEmail = '' }: NavbarProps) {
+export default function Navbar({ isSuperAdmin = false, isDemoMode = false, currentView = 'accounts', userEmail = '' }: NavbarProps) {
   return (
+    <>
+    {isDemoMode && (
+      <div className="bg-yellow-500 text-black text-center py-2 font-semibold text-sm sticky top-0 z-50">
+        Demo Mode — Data shown is for demonstration purposes only. Admin operations are disabled.
+      </div>
+    )}
     <nav className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center shadow">
       <div className="flex items-center space-x-6">
         <div className="text-xl font-bold">
@@ -60,5 +67,6 @@ export default function Navbar({ isSuperAdmin = false, currentView = 'accounts',
         </svg>
       </div>
     </nav>
+    </>
   );
 }

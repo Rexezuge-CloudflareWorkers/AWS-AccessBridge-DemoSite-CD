@@ -1,7 +1,7 @@
 import { IActivityAPIRoute } from './IActivityAPIRoute';
 import type { ActivityContext, IEnv, IRequest, IResponse, ExtendedResponse } from './IActivityAPIRoute';
 import { UserMetadataDAO } from '@/dao';
-import { UnauthorizedError } from '@/error';
+import { MethodNotAllowedError, UnauthorizedError } from '@/error';
 
 abstract class IAdminActivityAPIRoute<
   TRequest extends IRequest,
@@ -13,6 +13,9 @@ abstract class IAdminActivityAPIRoute<
     env: TEnv,
     cxt: ActivityContext<TEnv>,
   ): Promise<TResponse | ExtendedResponse<TResponse>> {
+    if (this.isDemoMode(cxt)) {
+      throw new MethodNotAllowedError('Admin operations are disabled in demo mode.');
+    }
     const userEmail: string = this.getAuthenticatedUserEmailAddress(cxt);
     const userMetadataDAO: UserMetadataDAO = new UserMetadataDAO(env.AccessBridgeDB);
     const isSuperAdmin: boolean = await userMetadataDAO.isSuperAdmin(userEmail);

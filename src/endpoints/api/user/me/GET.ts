@@ -15,7 +15,7 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
           'application/json': {
             schema: {
               type: 'object' as const,
-              required: ['email', 'isSuperAdmin'],
+              required: ['email', 'isSuperAdmin', 'demoMode'],
               properties: {
                 email: {
                   type: 'string' as const,
@@ -28,6 +28,11 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
                   description: 'Whether the user has super admin privileges',
                   example: false,
                 },
+                demoMode: {
+                  type: 'boolean' as const,
+                  description: 'Whether the application is running in demo mode',
+                  example: false,
+                },
               },
             },
             examples: {
@@ -36,6 +41,7 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
                 value: {
                   email: 'john.doe@company.com',
                   isSuperAdmin: false,
+                  demoMode: false,
                 },
               },
               'admin-user': {
@@ -43,6 +49,7 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
                 value: {
                   email: 'admin@company.com',
                   isSuperAdmin: true,
+                  demoMode: false,
                 },
               },
             },
@@ -114,6 +121,7 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
     env: GetCurrentUserEnv,
     cxt: ActivityContext<GetCurrentUserEnv>,
   ): Promise<GetCurrentUserResponse> {
+    const demoMode: boolean = this.isDemoMode(cxt);
     const userEmail: string = this.getAuthenticatedUserEmailAddress(cxt);
     const userMetadataDAO: UserMetadataDAO = new UserMetadataDAO(env.AccessBridgeDB);
 
@@ -125,6 +133,7 @@ class GetCurrentUserRoute extends IActivityAPIRoute<GetCurrentUserRequest, GetCu
     return {
       email: userEmail,
       isSuperAdmin,
+      demoMode,
     };
   }
 }
@@ -134,6 +143,7 @@ type GetCurrentUserRequest = IRequest;
 interface GetCurrentUserResponse extends IResponse {
   email: string;
   isSuperAdmin: boolean;
+  demoMode: boolean;
 }
 
 type GetCurrentUserEnv = IEnv;

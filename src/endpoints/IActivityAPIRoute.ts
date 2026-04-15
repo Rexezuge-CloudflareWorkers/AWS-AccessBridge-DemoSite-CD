@@ -3,7 +3,7 @@ import { Context } from 'hono';
 import type { StatusCode } from 'hono/utils/http-status';
 import { EmailValidationUtil, TokenAuthUtil, BaseUrlUtil } from '@/utils';
 import { DefaultInternalServerError, InternalServerError, IServiceError } from '@/error';
-import { D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED } from '@/constants';
+import { D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED, DEMO_USER_EMAIL, DEFAULT_DEMO_MODE } from '@/constants';
 import { AUDIT_ACTIONS } from '@/constants/AuditActions';
 import { AuditLogDAO } from '@/dao/AuditLogDAO';
 
@@ -88,7 +88,14 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
     return BaseUrlUtil.getBaseUrl(c.req.raw);
   }
 
+  protected isDemoMode(c: ActivityContext<TEnv>): boolean {
+    return (c.env.DEMO_MODE || DEFAULT_DEMO_MODE) === 'true';
+  }
+
   private async authenticateUserIdentity(c: ActivityContext<TEnv>): Promise<string> {
+    if (this.isDemoMode(c)) {
+      return DEMO_USER_EMAIL;
+    }
     const authHeader: string | undefined = c.req.header('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token: string = authHeader.substring(7);
@@ -114,6 +121,7 @@ interface ExtendedResponse<TResponse extends IResponse> {
 interface IEnv {
   TEAM_DOMAIN?: string | undefined;
   POLICY_AUD?: string | undefined;
+  DEMO_MODE?: string | undefined;
   Variables: {
     AuthenticatedUserEmailAddress: string;
   };
