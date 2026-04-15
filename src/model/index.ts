@@ -12,3 +12,4 @@ export type { UserAccessToken, UserAccessTokenMetadata, UserAccessTokenInternal 
 export type { AuditLog, AuditLogInternal } from './AuditLog';
 export type { CostData, CostDataInternal } from './CostData';
 export type { SpendAlert, SpendAlertInternal } from './SpendAlert';
+export type { ResourceInventoryItem, ResourceInventoryItemInternal } from './ResourceInventoryItem';

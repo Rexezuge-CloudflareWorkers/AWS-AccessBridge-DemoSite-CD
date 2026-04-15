@@ -36,8 +36,10 @@ import {
   DeleteSpendAlertRoute,
   EnableDataCollectionRoute,
   DisableDataCollectionRoute,
+  ListResourcesRoute,
+  GetResourceSummaryRoute,
 } from '@/endpoints';
-import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask } from '@/scheduled';
+import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask, ResourceInventoryCollectionTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
 
 class AccessBridgeWorker extends AbstractWorker {
@@ -103,6 +105,10 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.post('/api/admin/collection/config', EnableDataCollectionRoute);
     openapi.delete('/api/admin/collection/config', DisableDataCollectionRoute);
 
+    // Resource Routes
+    openapi.get('/api/resources', ListResourcesRoute);
+    openapi.get('/api/resources/summary', GetResourceSummaryRoute);
+
     this.app = openapi;
   }
 
@@ -114,6 +120,7 @@ class AccessBridgeWorker extends AbstractWorker {
     await new CredentialCacheRefreshTask().handle(event, env, ctx);
     await new AuditLogCleanupTask().handle(event, env, ctx);
     await new CostDataCollectionTask().handle(event, env, ctx);
+    await new ResourceInventoryCollectionTask().handle(event, env, ctx);
   }
 }
 

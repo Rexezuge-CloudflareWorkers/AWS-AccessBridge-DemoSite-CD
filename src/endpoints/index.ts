@@ -34,6 +34,8 @@ import { CreateSpendAlertRoute as OriginalCreateSpendAlertRoute } from './api/ad
 import { DeleteSpendAlertRoute as OriginalDeleteSpendAlertRoute } from './api/admin/cost/alerts/DELETE';
 import { EnableDataCollectionRoute as OriginalEnableDataCollectionRoute } from './api/admin/collection/config/POST';
 import { DisableDataCollectionRoute as OriginalDisableDataCollectionRoute } from './api/admin/collection/config/DELETE';
+import { ListResourcesRoute as OriginalListResourcesRoute } from './api/resources/GET';
+import { GetResourceSummaryRoute as OriginalGetResourceSummaryRoute } from './api/resources/summary/GET';
 
 export const GenerateConsoleUrlRoute: any = OriginalGenerateConsoleUrlRoute;
 export const AssumeRoleRoute: any = OriginalAssumeRoleRoute;
@@ -69,3 +71,5 @@ export const CreateSpendAlertRoute: any = OriginalCreateSpendAlertRoute;
 export const DeleteSpendAlertRoute: any = OriginalDeleteSpendAlertRoute;
 export const EnableDataCollectionRoute: any = OriginalEnableDataCollectionRoute;
 export const DisableDataCollectionRoute: any = OriginalDisableDataCollectionRoute;
+export const ListResourcesRoute: any = OriginalListResourcesRoute;
+export const GetResourceSummaryRoute: any = OriginalGetResourceSummaryRoute;

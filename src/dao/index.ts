@@ -12,3 +12,4 @@ export { AuditLogDAO } from './AuditLogDAO';
 export { CostDataDAO } from './CostDataDAO';
 export { DataCollectionConfigDAO } from './DataCollectionConfigDAO';
 export { SpendAlertDAO } from './SpendAlertDAO';
+export { ResourceInventoryDAO } from './ResourceInventoryDAO';

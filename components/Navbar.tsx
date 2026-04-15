@@ -32,6 +32,14 @@ export default function Navbar({ isSuperAdmin = false, currentView = 'accounts',
           >
             Costs
           </Link>
+          <Link
+            href="/resources"
+            className={`px-3 py-1 rounded transition-colors ${
+              currentView === 'resources' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Resources
+          </Link>
           {isSuperAdmin && (
             <Link
               href="/admin"
