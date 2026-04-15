@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import OnboardingWizard from './OnboardingWizard';
 
 interface LoadingButtonProps {
   onClick: () => Promise<void> | void;
@@ -43,7 +44,7 @@ function LoadingButton({ onClick, disabled = false, className = '', children, ty
 }
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('credentials');
+  const [activeTab, setActiveTab] = useState('wizard');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -52,6 +53,7 @@ export default function AdminPage() {
   };
 
   const tabs = [
+    { id: 'wizard', label: 'Setup Wizard' },
     { id: 'credentials', label: 'Credentials' },
     { id: 'access', label: 'User Access' },
     { id: 'accounts', label: 'Account Nicknames' },
@@ -89,6 +91,7 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {activeTab === 'wizard' && <OnboardingWizard showMessage={showMessage} />}
       {activeTab === 'credentials' && <CredentialsTab showMessage={showMessage} />}
       {activeTab === 'access' && <AccessTab showMessage={showMessage} />}
       {activeTab === 'accounts' && <AccountsTab showMessage={showMessage} />}

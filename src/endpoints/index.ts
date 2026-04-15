@@ -23,6 +23,9 @@ import { FederateWrapperRoute as OriginalFederateWrapperRoute } from './federate
 import { CreateTokenRoute as OriginalCreateTokenRoute } from './api/user/token/POST';
 import { DeleteTokenRoute as OriginalDeleteTokenRoute } from './api/user/token/DELETE';
 import { ListTokensRoute as OriginalListTokensRoute } from './api/user/tokens/GET';
+import { ValidateCredentialsRoute as OriginalValidateCredentialsRoute } from './api/admin/credentials/validate/POST';
+import { TestCredentialChainRoute as OriginalTestCredentialChainRoute } from './api/admin/credentials/test-chain/POST';
+import { ListAccountRolesRoute as OriginalListAccountRolesRoute } from './api/admin/account/roles/POST';
 
 export const GenerateConsoleUrlRoute: any = OriginalGenerateConsoleUrlRoute;
 export const AssumeRoleRoute: any = OriginalAssumeRoleRoute;
@@ -47,3 +50,6 @@ export const FederateWrapperRoute: any = OriginalFederateWrapperRoute;
 export const CreateTokenRoute: any = OriginalCreateTokenRoute;
 export const DeleteTokenRoute: any = OriginalDeleteTokenRoute;
 export const ListTokensRoute: any = OriginalListTokensRoute;
+export const ValidateCredentialsRoute: any = OriginalValidateCredentialsRoute;
+export const TestCredentialChainRoute: any = OriginalTestCredentialChainRoute;
+export const ListAccountRolesRoute: any = OriginalListAccountRolesRoute;

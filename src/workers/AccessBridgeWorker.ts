@@ -25,6 +25,9 @@ import {
   CreateTokenRoute,
   ListTokensRoute,
   DeleteTokenRoute,
+  ValidateCredentialsRoute,
+  TestCredentialChainRoute,
+  ListAccountRolesRoute,
 } from '@/endpoints';
 import { CredentialCacheRefreshTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
@@ -78,6 +81,9 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.delete('/api/admin/account/nickname', RemoveAccountNicknameRoute);
     openapi.put('/api/admin/role/config', SetRoleConfigRoute);
     openapi.delete('/api/admin/role/config', DeleteRoleConfigRoute);
+    openapi.post('/api/admin/credentials/validate', ValidateCredentialsRoute);
+    openapi.post('/api/admin/credentials/test-chain', TestCredentialChainRoute);
+    openapi.post('/api/admin/account/roles', ListAccountRolesRoute);
 
     this.app = openapi;
   }
