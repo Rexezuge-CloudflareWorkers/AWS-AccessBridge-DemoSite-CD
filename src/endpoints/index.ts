@@ -26,6 +26,7 @@ import { ListTokensRoute as OriginalListTokensRoute } from './api/user/tokens/GE
 import { ValidateCredentialsRoute as OriginalValidateCredentialsRoute } from './api/admin/credentials/validate/POST';
 import { TestCredentialChainRoute as OriginalTestCredentialChainRoute } from './api/admin/credentials/test-chain/POST';
 import { ListAccountRolesRoute as OriginalListAccountRolesRoute } from './api/admin/account/roles/POST';
+import { ListAuditLogsRoute as OriginalListAuditLogsRoute } from './api/admin/audit-logs/GET';
 
 export const GenerateConsoleUrlRoute: any = OriginalGenerateConsoleUrlRoute;
 export const AssumeRoleRoute: any = OriginalAssumeRoleRoute;
@@ -53,3 +54,4 @@ export const ListTokensRoute: any = OriginalListTokensRoute;
 export const ValidateCredentialsRoute: any = OriginalValidateCredentialsRoute;
 export const TestCredentialChainRoute: any = OriginalTestCredentialChainRoute;
 export const ListAccountRolesRoute: any = OriginalListAccountRolesRoute;
+export const ListAuditLogsRoute: any = OriginalListAuditLogsRoute;

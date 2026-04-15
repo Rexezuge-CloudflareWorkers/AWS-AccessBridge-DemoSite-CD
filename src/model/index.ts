@@ -9,3 +9,4 @@ export type { CredentialChain } from './CredentialChain';
 export type { RoleConfig, RoleConfigInternal } from './RoleConfig';
 export type { UserMetadata, UserMetadataInternal } from './UserMetadata';
 export type { UserAccessToken, UserAccessTokenMetadata, UserAccessTokenInternal } from './UserAccessToken';
+export type { AuditLog, AuditLogInternal } from './AuditLog';

@@ -28,8 +28,9 @@ import {
   ValidateCredentialsRoute,
   TestCredentialChainRoute,
   ListAccountRolesRoute,
+  ListAuditLogsRoute,
 } from '@/endpoints';
-import { CredentialCacheRefreshTask } from '@/scheduled';
+import { CredentialCacheRefreshTask, AuditLogCleanupTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
 
 class AccessBridgeWorker extends AbstractWorker {
@@ -84,6 +85,7 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.post('/api/admin/credentials/validate', ValidateCredentialsRoute);
     openapi.post('/api/admin/credentials/test-chain', TestCredentialChainRoute);
     openapi.post('/api/admin/account/roles', ListAccountRolesRoute);
+    openapi.get('/api/admin/audit-logs', ListAuditLogsRoute);
 
     this.app = openapi;
   }
@@ -94,6 +96,7 @@ class AccessBridgeWorker extends AbstractWorker {
 
   protected async handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     await new CredentialCacheRefreshTask().handle(event, env, ctx);
+    await new AuditLogCleanupTask().handle(event, env, ctx);
   }
 }
 

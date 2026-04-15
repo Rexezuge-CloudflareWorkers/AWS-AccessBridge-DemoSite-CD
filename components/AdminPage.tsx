@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import OnboardingWizard from './OnboardingWizard';
+import AuditLogsTab from './AuditLogsTab';
 
 interface LoadingButtonProps {
   onClick: () => Promise<void> | void;
@@ -58,6 +59,7 @@ export default function AdminPage() {
     { id: 'access', label: 'User Access' },
     { id: 'accounts', label: 'Account Nicknames' },
     { id: 'roleconfig', label: 'Role Config' },
+    { id: 'auditlogs', label: 'Audit Logs' },
   ];
 
   return (
@@ -96,6 +98,7 @@ export default function AdminPage() {
       {activeTab === 'access' && <AccessTab showMessage={showMessage} />}
       {activeTab === 'accounts' && <AccountsTab showMessage={showMessage} />}
       {activeTab === 'roleconfig' && <RoleConfigTab showMessage={showMessage} />}
+      {activeTab === 'auditlogs' && <AuditLogsTab showMessage={showMessage} />}
     </div>
   );
 }

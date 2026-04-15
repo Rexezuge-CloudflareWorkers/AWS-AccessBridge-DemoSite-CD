@@ -8,3 +8,4 @@ export { RoleConfigsDAO } from './RoleConfigsDAO';
 export { UserAccessTokenDAO } from './UserAccessTokenDAO';
 export { UserFavoriteAccountsDAO } from './UserFavoriteAccountsDAO';
 export { UserMetadataDAO } from './UserMetadataDAO';
+export { AuditLogDAO } from './AuditLogDAO';
