@@ -163,7 +163,7 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
     <div>
       {isLoading && (
         <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-400 border-t-transparent mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mx-auto mb-4"></div>
           <p className="text-gray-400">Loading Accounts...</p>
         </div>
       )}
@@ -197,11 +197,11 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
       )}
       {!isLoading &&
         Object.entries(rolesData).map(([accountId, accountData]) => (
-          <div key={accountId} className="bg-gray-800 rounded p-4 my-2 text-white shadow animate-fade-in-up">
+          <div key={accountId} className="bg-gray-800 rounded p-4 my-2 text-white shadow">
             <div className="flex items-center justify-between">
               <div className="flex items-center cursor-pointer" onClick={() => toggleExpand(accountId)}>
                 <svg
-                  className={`w-3 h-3 mr-2 transition-transform duration-200 ${expanded[accountId] ? 'rotate-90' : ''}`}
+                  className={`w-3 h-3 mr-2 transform transition-transform ${expanded[accountId] ? 'rotate-90' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -219,43 +219,39 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
                 {accountData.favorite ? '⭐' : '☆'}
               </button>
             </div>
-            <div
-              className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded[accountId] ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-            >
-              <div className="overflow-hidden">
-                <div className="ml-6 mt-2 space-y-2">
-                  {accountData.roles.map((role) => {
-                    const loadingKey = `${accountId}-${role}`;
-                    const isLoadingKeys = loadingKeys === loadingKey;
-                    const isLoadingConsole = loadingConsole === loadingKey;
+            {expanded[accountId] && (
+              <div className="ml-6 mt-2 space-y-2">
+                {accountData.roles.map((role) => {
+                  const loadingKey = `${accountId}-${role}`;
+                  const isLoadingKeys = loadingKeys === loadingKey;
+                  const isLoadingConsole = loadingConsole === loadingKey;
 
-                    return (
-                      <div key={role} className="flex justify-between items-center">
-                        <a
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            if (!isLoadingConsole) handleConsole(accountId, role);
-                          }}
-                          className={`transition-colors ${
-                            isLoadingConsole ? 'text-gray-400 cursor-not-allowed' : 'text-blue-400 hover:underline'
-                          }`}
-                        >
-                          {isLoadingConsole ? '⏳ Opening Console...' : role}
-                        </a>
-                        <button
-                          className={`text-sm transition-colors ${isLoadingKeys ? 'text-gray-400' : 'text-blue-300 hover:text-blue-500'}`}
-                          onClick={() => handleAccessKeys(accountId, role)}
-                          disabled={isLoadingKeys}
-                        >
-                          {isLoadingKeys ? '⏳ Loading...' : '🔑 Access Keys'}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                  return (
+                    <div key={role} className="flex justify-between items-center">
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (!isLoadingConsole) handleConsole(accountId, role);
+                        }}
+                        className={`transition-colors ${
+                          isLoadingConsole ? 'text-gray-400 cursor-not-allowed' : 'text-blue-400 hover:underline'
+                        }`}
+                      >
+                        {isLoadingConsole ? '⏳ Opening Console...' : role}
+                      </a>
+                      <button
+                        className={`text-sm transition-colors ${isLoadingKeys ? 'text-gray-400' : 'text-blue-300 hover:text-blue-500'}`}
+                        onClick={() => handleAccessKeys(accountId, role)}
+                        disabled={isLoadingKeys}
+                      >
+                        {isLoadingKeys ? '⏳ Loading...' : '🔑 Access Keys'}
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
+            )}
           </div>
         ))}
 

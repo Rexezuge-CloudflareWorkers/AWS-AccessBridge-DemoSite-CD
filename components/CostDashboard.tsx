@@ -47,7 +47,7 @@ export default function CostDashboard() {
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-400 border-t-transparent mx-auto mb-4"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-400 mx-auto mb-4"></div>
         <p className="text-gray-400">Loading cost data...</p>
       </div>
     );

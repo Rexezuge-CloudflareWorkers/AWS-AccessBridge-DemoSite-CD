@@ -32,7 +32,7 @@ export default function AccessKeyModal({ accessKeyId, secretAccessKey, sessionTo
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 animate-backdrop-in">
+    <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50">
       <div className="bg-gray-800 text-white p-6 rounded-xl shadow-2xl w-full max-w-xl animate-fade-in">
         <h2 className="text-2xl font-bold mb-4">Access Keys</h2>
         <pre className="bg-gray-700 p-4 rounded text-sm overflow-x-auto whitespace-pre-wrap">

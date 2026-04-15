@@ -104,7 +104,7 @@ export default function ResourceInventory() {
 
       {/* Resource Table */}
       {isLoading ? (
-        <div className="text-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-400 border-t-transparent mx-auto"></div></div>
+        <div className="text-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div></div>
       ) : resources.length === 0 ? (
         <div className="bg-gray-800 p-8 rounded text-center text-gray-400">
           <p className="text-lg mb-2">No resources found.</p>

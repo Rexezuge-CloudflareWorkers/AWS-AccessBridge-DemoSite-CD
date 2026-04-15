@@ -94,7 +94,7 @@ export default function AuditLogsTab({ showMessage }: AuditLogsTabProps) {
 
       {isLoading && (
         <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-400 border-t-transparent mx-auto"></div>
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400 mx-auto"></div>
         </div>
       )}
 
