@@ -1,35 +1,38 @@
+'use client';
+
+import Link from 'next/link';
+
 interface NavbarProps {
   isSuperAdmin?: boolean;
   currentView?: 'accounts' | 'admin';
-  setCurrentView?: (view: 'accounts' | 'admin') => void;
   userEmail?: string;
 }
 
-export default function Navbar({ isSuperAdmin = false, currentView = 'accounts', setCurrentView, userEmail = '' }: NavbarProps) {
+export default function Navbar({ isSuperAdmin = false, currentView = 'accounts', userEmail = '' }: NavbarProps) {
   return (
     <nav className="bg-gray-900 text-white px-6 py-4 flex justify-between items-center shadow">
       <div className="flex items-center space-x-6">
         <div className="text-xl font-bold">
           <span className="text-blue-400">AWS</span> AccessBridge
         </div>
-        {isSuperAdmin && setCurrentView && (
+        {isSuperAdmin && (
           <div className="flex space-x-4">
-            <button
-              onClick={() => setCurrentView('accounts')}
+            <Link
+              href="/"
               className={`px-3 py-1 rounded transition-colors ${
                 currentView === 'accounts' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
               }`}
             >
               Accounts
-            </button>
-            <button
-              onClick={() => setCurrentView('admin')}
+            </Link>
+            <Link
+              href="/admin"
               className={`px-3 py-1 rounded transition-colors ${
                 currentView === 'admin' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
               }`}
             >
               Admin
-            </button>
+            </Link>
           </div>
         )}
       </div>

@@ -119,9 +119,9 @@ web_modules/
 .parcel-cache
 
 # Next.js build output
-
 .next
 out
+.open-next
 
 # Nuxt.js build / generate output
 
@@ -183,3 +183,4 @@ dist
 
 .dev.vars
 .wrangler/
+tsconfig.tsbuildinfo

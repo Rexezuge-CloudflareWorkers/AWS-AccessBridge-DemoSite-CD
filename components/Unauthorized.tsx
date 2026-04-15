@@ -1,3 +1,5 @@
+'use client';
+
 export default function Unauthorized() {
   return (
     <div className="bg-gray-900 min-h-screen text-white flex items-center justify-center">

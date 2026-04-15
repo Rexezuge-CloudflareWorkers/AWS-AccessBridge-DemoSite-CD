@@ -20,7 +20,7 @@ class HMACHandler {
       const now: number = TimestampUtil.getCurrentUnixTimestampInMilliseconds();
       const requestTime: number = parseInt(timestamp);
       if (Math.abs(now - requestTime) <= INTERNAL_REQUEST_VALID_TIME_WINDOW_MILLISECONDS) {
-        const clonedRequest: Request = c.req.raw.clone();
+        const clonedRequest = c.req.raw.clone();
         const body: string = await clonedRequest.text();
         const bodyHash: string = await hashBody(body);
         const path: string = new URL(c.req.url).pathname;

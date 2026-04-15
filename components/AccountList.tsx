@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import AccessKeyModal from './AccessKeyModal';
 
@@ -23,22 +25,20 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
 
   const fetchAccounts = useCallback(async () => {
     setIsLoading(true);
-    const backendUrl = import.meta.env.VITE_OPTIONAL_BACKEND_URL || '';
-    const baseUrl = backendUrl ? backendUrl : '';
 
     let url: string;
     if (searchTerm.trim()) {
       const params = new URLSearchParams();
       params.set('q', searchTerm.trim());
       if (showHidden) params.set('showHidden', 'true');
-      url = `${baseUrl}/api/user/assumables/search?${params.toString()}`;
+      url = `/api/user/assumables/search?${params.toString()}`;
     } else {
       const offset = (currentPage - 1) * pageSize;
       const params = new URLSearchParams();
       if (showHidden) params.set('showHidden', 'true');
       params.set('limit', pageSize.toString());
       params.set('offset', offset.toString());
-      url = `${baseUrl}/api/user/assumables?${params.toString()}`;
+      url = `/api/user/assumables?${params.toString()}`;
     }
 
     try {
@@ -48,20 +48,20 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
         return;
       }
       if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
+        const errorData = (await res.json().catch(() => null)) as { Exception?: { Message?: string } } | null;
         const errorMsg = errorData?.Exception?.Message || `Failed to load accounts: ${res.status} ${res.statusText}`;
         throw new Error(errorMsg);
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as RoleMap & { totalAccounts?: number };
       if (data) {
         if (searchTerm.trim()) {
           setRolesData(data);
           setTotalAccounts(Object.keys(data).length);
         } else {
-          const { totalAccounts, ...accounts } = data;
+          const { totalAccounts: total, ...accounts } = data;
           setRolesData(accounts);
-          setTotalAccounts(totalAccounts);
+          setTotalAccounts(total ?? 0);
         }
         setExpanded(Object.fromEntries(Object.keys(searchTerm.trim() ? data : data).map((id) => [id, false])));
         setError(null);
@@ -83,11 +83,9 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
 
   const toggleFavorite = async (accountId: string) => {
     const isFavorite = rolesData[accountId]?.favorite;
-    const backendUrl = import.meta.env.VITE_OPTIONAL_BACKEND_URL || '';
-    const baseUrl = backendUrl ? backendUrl : '';
 
     try {
-      const response = await fetch(`${baseUrl}/api/user/favorites`, {
+      const response = await fetch('/api/user/favorites', {
         method: isFavorite ? 'DELETE' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ awsAccountId: accountId }),
@@ -121,9 +119,7 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
 
     setLoadingKeys(loadingKey);
     try {
-      const backendUrl = import.meta.env.VITE_OPTIONAL_BACKEND_URL || '';
-      const baseUrl = backendUrl ? backendUrl : '';
-      const assumeRes = await fetch(`${baseUrl}/api/aws/assume-role`, {
+      const assumeRes = await fetch('/api/aws/assume-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ principalArn }),
@@ -153,9 +149,7 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
     const loadingKey = `${accountId}-${role}`;
     setLoadingConsole(loadingKey);
     try {
-      const backendUrl = import.meta.env.VITE_OPTIONAL_BACKEND_URL || '';
-      const baseUrl = backendUrl ? backendUrl : '';
-      const federateUrl = `${baseUrl}/federate?awsAccountId=${accountId}&role=${encodeURIComponent(role)}`;
+      const federateUrl = `/federate?awsAccountId=${accountId}&role=${encodeURIComponent(role)}`;
       window.open(federateUrl, '_blank');
     } catch (error) {
       console.error(error);
