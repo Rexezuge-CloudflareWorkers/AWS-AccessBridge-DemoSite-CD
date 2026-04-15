@@ -33,6 +33,20 @@ class AssumableRolesDAO {
   }
 
   /**
+   * Retrieves a list of distinct AWS account IDs the user has access to.
+   * @param userEmail The email address of the user.
+   * @returns A list of distinct AWS account IDs.
+   */
+  public async getDistinctAccountIds(userEmail: string): Promise<string[]> {
+    const results = await this.database
+      .prepare('SELECT DISTINCT aws_account_id FROM assumable_roles WHERE user_email = ?')
+      .bind(userEmail)
+      .all<{ aws_account_id: string }>();
+
+    return (results.results || []).map((row) => row.aws_account_id);
+  }
+
+  /**
    * Gets the total count of unique accounts accessible by the user.
    * @param userEmail The email address of the user.
    * @param showHidden Whether to include hidden roles in the count.

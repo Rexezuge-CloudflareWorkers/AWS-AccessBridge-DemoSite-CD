@@ -25,8 +25,32 @@ import {
   CreateTokenRoute,
   ListTokensRoute,
   DeleteTokenRoute,
+  ValidateCredentialsRoute,
+  TestCredentialChainRoute,
+  ListAccountRolesRoute,
+  ListAuditLogsRoute,
+  GetCostSummaryRoute,
+  GetAccountCostRoute,
+  GetCostTrendsRoute,
+  CreateSpendAlertRoute,
+  DeleteSpendAlertRoute,
+  EnableDataCollectionRoute,
+  DisableDataCollectionRoute,
+  ListResourcesRoute,
+  GetResourceSummaryRoute,
+  CreateTeamRoute,
+  DeleteTeamRoute,
+  ListTeamsRoute,
+  UpdateTeamNameRoute,
+  AddTeamMemberRoute,
+  RemoveTeamMemberRoute,
+  ListTeamMembersRoute,
+  UpdateTeamMemberRoleRoute,
+  AddTeamAccountRoute,
+  RemoveTeamAccountRoute,
+  ListTeamAccountsRoute,
 } from '@/endpoints';
-import { CredentialCacheRefreshTask } from '@/scheduled';
+import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask, ResourceInventoryCollectionTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
 
 class AccessBridgeWorker extends AbstractWorker {
@@ -78,6 +102,36 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.delete('/api/admin/account/nickname', RemoveAccountNicknameRoute);
     openapi.put('/api/admin/role/config', SetRoleConfigRoute);
     openapi.delete('/api/admin/role/config', DeleteRoleConfigRoute);
+    openapi.post('/api/admin/credentials/validate', ValidateCredentialsRoute);
+    openapi.post('/api/admin/credentials/test-chain', TestCredentialChainRoute);
+    openapi.post('/api/admin/account/roles', ListAccountRolesRoute);
+    openapi.get('/api/admin/audit-logs', ListAuditLogsRoute);
+
+    // Cost Routes
+    openapi.get('/api/cost/summary', GetCostSummaryRoute);
+    openapi.get('/api/cost/account', GetAccountCostRoute);
+    openapi.get('/api/cost/trends', GetCostTrendsRoute);
+    openapi.post('/api/admin/cost/alerts', CreateSpendAlertRoute);
+    openapi.delete('/api/admin/cost/alerts', DeleteSpendAlertRoute);
+    openapi.post('/api/admin/collection/config', EnableDataCollectionRoute);
+    openapi.delete('/api/admin/collection/config', DisableDataCollectionRoute);
+
+    // Resource Routes
+    openapi.get('/api/resources', ListResourcesRoute);
+    openapi.get('/api/resources/summary', GetResourceSummaryRoute);
+
+    // Team Routes
+    openapi.post('/api/admin/team', CreateTeamRoute);
+    openapi.delete('/api/admin/team', DeleteTeamRoute);
+    openapi.get('/api/admin/teams', ListTeamsRoute);
+    openapi.put('/api/admin/team/name', UpdateTeamNameRoute);
+    openapi.post('/api/admin/team/member', AddTeamMemberRoute);
+    openapi.delete('/api/admin/team/member', RemoveTeamMemberRoute);
+    openapi.get('/api/admin/team/members', ListTeamMembersRoute);
+    openapi.put('/api/admin/team/member/role', UpdateTeamMemberRoleRoute);
+    openapi.post('/api/admin/team/account', AddTeamAccountRoute);
+    openapi.delete('/api/admin/team/account', RemoveTeamAccountRoute);
+    openapi.get('/api/admin/team/accounts', ListTeamAccountsRoute);
 
     this.app = openapi;
   }
@@ -88,6 +142,9 @@ class AccessBridgeWorker extends AbstractWorker {
 
   protected async handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     await new CredentialCacheRefreshTask().handle(event, env, ctx);
+    await new AuditLogCleanupTask().handle(event, env, ctx);
+    await new CostDataCollectionTask().handle(event, env, ctx);
+    await new ResourceInventoryCollectionTask().handle(event, env, ctx);
   }
 }
 

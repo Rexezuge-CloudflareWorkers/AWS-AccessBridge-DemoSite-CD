@@ -9,5 +9,6 @@ export { ErrorDeserializationUtil } from './ErrorDeserializationUtil';
 export { ErrorTranslationUtil } from './ErrorTranslationUtil';
 export { TimestampUtil } from './TimestampUtil';
 export { UUIDUtil } from './UUIDUtil';
+export { AwsApiUtil } from './AwsApiUtil';
 
 export { InternalRequestHelper } from './helpers/InternalRequestHelper';

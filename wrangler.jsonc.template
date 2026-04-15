@@ -1,6 +1,6 @@
 {
-  // "$version": 1766288169,
-  // "$minimumVersion": 1766030299,
+  // "$version": 1776258590,
+  // "$minimumVersion": 1776258590,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aws-access-bridge",
   "main": "src/index.ts",
@@ -67,8 +67,9 @@
     "MAX_TOKENS_PER_USER": "5",
     "MAX_TOKEN_EXPIRY_DAYS": "90",
     "PRINCIPAL_TRUST_CHAIN_LIMIT": "3",
+    "AUDIT_LOG_RETENTION_DAYS": "90",
   },
   "triggers": {
-    "crons": ["*/10 * * * *"], 
+    "crons": ["*/10 * * * *"],
   },
 }
