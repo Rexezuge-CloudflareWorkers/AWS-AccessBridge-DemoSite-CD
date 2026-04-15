@@ -38,6 +38,17 @@ import {
   DisableDataCollectionRoute,
   ListResourcesRoute,
   GetResourceSummaryRoute,
+  CreateTeamRoute,
+  DeleteTeamRoute,
+  ListTeamsRoute,
+  UpdateTeamNameRoute,
+  AddTeamMemberRoute,
+  RemoveTeamMemberRoute,
+  ListTeamMembersRoute,
+  UpdateTeamMemberRoleRoute,
+  AddTeamAccountRoute,
+  RemoveTeamAccountRoute,
+  ListTeamAccountsRoute,
 } from '@/endpoints';
 import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask, ResourceInventoryCollectionTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
@@ -108,6 +119,19 @@ class AccessBridgeWorker extends AbstractWorker {
     // Resource Routes
     openapi.get('/api/resources', ListResourcesRoute);
     openapi.get('/api/resources/summary', GetResourceSummaryRoute);
+
+    // Team Routes
+    openapi.post('/api/admin/team', CreateTeamRoute);
+    openapi.delete('/api/admin/team', DeleteTeamRoute);
+    openapi.get('/api/admin/teams', ListTeamsRoute);
+    openapi.put('/api/admin/team/name', UpdateTeamNameRoute);
+    openapi.post('/api/admin/team/member', AddTeamMemberRoute);
+    openapi.delete('/api/admin/team/member', RemoveTeamMemberRoute);
+    openapi.get('/api/admin/team/members', ListTeamMembersRoute);
+    openapi.put('/api/admin/team/member/role', UpdateTeamMemberRoleRoute);
+    openapi.post('/api/admin/team/account', AddTeamAccountRoute);
+    openapi.delete('/api/admin/team/account', RemoveTeamAccountRoute);
+    openapi.get('/api/admin/team/accounts', ListTeamAccountsRoute);
 
     this.app = openapi;
   }

@@ -13,3 +13,5 @@ export type { AuditLog, AuditLogInternal } from './AuditLog';
 export type { CostData, CostDataInternal } from './CostData';
 export type { SpendAlert, SpendAlertInternal } from './SpendAlert';
 export type { ResourceInventoryItem, ResourceInventoryItemInternal } from './ResourceInventoryItem';
+export type { Team, TeamInternal } from './Team';
+export type { TeamMember, TeamMemberInternal } from './TeamMember';

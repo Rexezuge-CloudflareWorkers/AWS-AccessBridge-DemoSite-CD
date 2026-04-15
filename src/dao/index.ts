@@ -13,3 +13,6 @@ export { CostDataDAO } from './CostDataDAO';
 export { DataCollectionConfigDAO } from './DataCollectionConfigDAO';
 export { SpendAlertDAO } from './SpendAlertDAO';
 export { ResourceInventoryDAO } from './ResourceInventoryDAO';
+export { TeamsDAO } from './TeamsDAO';
+export { TeamMembersDAO } from './TeamMembersDAO';
+export { TeamAccountsDAO } from './TeamAccountsDAO';
