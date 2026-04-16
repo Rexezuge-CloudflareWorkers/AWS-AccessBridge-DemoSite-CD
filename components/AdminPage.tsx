@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import OnboardingWizard from './OnboardingWizard';
 import AuditLogsTab from './AuditLogsTab';
+import TeamsTab from './TeamsTab';
 
 interface LoadingButtonProps {
   onClick: () => Promise<void> | void;
@@ -132,6 +133,9 @@ export default function AdminPage() {
     { id: 'access', label: 'User Access' },
     { id: 'accounts', label: 'Account Nicknames' },
     { id: 'roleconfig', label: 'Role Config' },
+    { id: 'teams', label: 'Teams' },
+    { id: 'spendalerts', label: 'Spend Alerts' },
+    { id: 'datacollection', label: 'Data Collection' },
     { id: 'auditlogs', label: 'Audit Logs' },
   ];
 
@@ -191,6 +195,9 @@ export default function AdminPage() {
         {activeTab === 'access' && <AccessTab showMessage={showMessage} />}
         {activeTab === 'accounts' && <AccountsTab showMessage={showMessage} />}
         {activeTab === 'roleconfig' && <RoleConfigTab showMessage={showMessage} />}
+        {activeTab === 'teams' && <TeamsTab showMessage={showMessage} />}
+        {activeTab === 'spendalerts' && <SpendAlertsTab showMessage={showMessage} />}
+        {activeTab === 'datacollection' && <DataCollectionTab showMessage={showMessage} />}
         {activeTab === 'auditlogs' && <AuditLogsTab showMessage={showMessage} />}
       </div>
     </div>
@@ -766,6 +773,312 @@ function RoleConfigTab({ showMessage }: { showMessage: (type: 'success' | 'error
           </LoadingButton>
         </div>
       </form>
+    </div>
+  );
+}
+
+function SpendAlertsTab({ showMessage }: { showMessage: (type: 'success' | 'error', text: string) => void }) {
+  const [createForm, setCreateForm] = useState({
+    awsAccountId: '',
+    thresholdAmount: '',
+    periodType: 'monthly',
+  });
+  const [deleteAlertId, setDeleteAlertId] = useState('');
+
+  const isCreateValid = createForm.awsAccountId.trim() !== '' && createForm.thresholdAmount.trim() !== '';
+  const isDeleteValid = deleteAlertId.trim() !== '';
+
+  const handleCreateAlert = async () => {
+    if (!isCreateValid) return;
+
+    try {
+      const response = await fetch('/api/admin/cost/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          awsAccountId: createForm.awsAccountId,
+          thresholdAmount: parseFloat(createForm.thresholdAmount),
+          periodType: createForm.periodType,
+        }),
+      });
+
+      const responseText = await response.text();
+      if (response.ok) {
+        const data = JSON.parse(responseText);
+        showMessage('success', `Spend alert created (ID: ${data.alert?.id || 'unknown'})`);
+        setCreateForm({ awsAccountId: '', thresholdAmount: '', periodType: 'monthly' });
+      } else {
+        let errorMessage = 'Failed to create spend alert';
+        try {
+          const error = JSON.parse(responseText);
+          errorMessage = error.Exception?.Message || error.message || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${responseText}`;
+        }
+        showMessage('error', errorMessage);
+      }
+    } catch (err) {
+      showMessage('error', `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleDeleteAlert = async () => {
+    if (!isDeleteValid) return;
+
+    try {
+      const response = await fetch('/api/admin/cost/alerts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId: deleteAlertId.trim() }),
+      });
+
+      const responseText = await response.text();
+      if (response.ok) {
+        showMessage('success', 'Spend alert deleted');
+        setDeleteAlertId('');
+      } else {
+        let errorMessage = 'Failed to delete spend alert';
+        try {
+          const error = JSON.parse(responseText);
+          errorMessage = error.Exception?.Message || error.message || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${responseText}`;
+        }
+        showMessage('error', errorMessage);
+      }
+    } catch (err) {
+      showMessage('error', `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Create Spend Alert</h3>
+        <p style={{ color: '#d1d5db', marginBottom: '24px' }}>
+          Set up cost threshold alerts for AWS accounts. Alerts are evaluated against cost data collected by background tasks.
+        </p>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
+          <FocusInput
+            type="text"
+            placeholder="AWS Account ID (12 digits)"
+            value={createForm.awsAccountId}
+            onChange={(e) => setCreateForm({ ...createForm, awsAccountId: e.target.value })}
+            pattern="[0-9]{12}"
+            required
+          />
+          <FocusInput
+            type="number"
+            placeholder="Threshold Amount (USD)"
+            value={createForm.thresholdAmount}
+            onChange={(e) => setCreateForm({ ...createForm, thresholdAmount: e.target.value })}
+            min="0"
+            step="0.01"
+            required
+          />
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', fontWeight: 500 }}>
+              Period Type
+            </label>
+            <select
+              value={createForm.periodType}
+              onChange={(e) => setCreateForm({ ...createForm, periodType: e.target.value })}
+              style={{
+                ...inputStyle,
+                cursor: 'pointer',
+              }}
+            >
+              <option value="monthly">Monthly</option>
+              <option value="daily">Daily</option>
+            </select>
+          </div>
+          <LoadingButton onClick={handleCreateAlert} disabled={!isCreateValid} variant="green">
+            Create Alert
+          </LoadingButton>
+        </form>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Delete Spend Alert</h3>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
+          <FocusInput
+            type="text"
+            placeholder="Alert ID (UUID)"
+            value={deleteAlertId}
+            onChange={(e) => setDeleteAlertId(e.target.value)}
+            required
+          />
+          <LoadingButton onClick={handleDeleteAlert} disabled={!isDeleteValid} variant="red">
+            Delete Alert
+          </LoadingButton>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DataCollectionTab({ showMessage }: { showMessage: (type: 'success' | 'error', text: string) => void }) {
+  const [enableForm, setEnableForm] = useState({
+    principalArn: '',
+    costEnabled: true,
+    resourceEnabled: true,
+  });
+  const [disableForm, setDisableForm] = useState({
+    principalArn: '',
+    collectionType: 'cost',
+  });
+
+  const isEnableValid = enableForm.principalArn.trim() !== '' && (enableForm.costEnabled || enableForm.resourceEnabled);
+  const isDisableValid = disableForm.principalArn.trim() !== '';
+
+  const handleEnableCollection = async () => {
+    if (!isEnableValid) return;
+
+    const collectionTypes: string[] = [];
+    if (enableForm.costEnabled) collectionTypes.push('cost');
+    if (enableForm.resourceEnabled) collectionTypes.push('resource');
+
+    try {
+      const response = await fetch('/api/admin/collection/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          principalArn: enableForm.principalArn,
+          collectionTypes,
+        }),
+      });
+
+      const responseText = await response.text();
+      if (response.ok) {
+        showMessage('success', `Data collection enabled for ${collectionTypes.join(', ')}`);
+        setEnableForm({ principalArn: '', costEnabled: true, resourceEnabled: true });
+      } else {
+        let errorMessage = 'Failed to enable data collection';
+        try {
+          const error = JSON.parse(responseText);
+          errorMessage = error.Exception?.Message || error.message || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${responseText}`;
+        }
+        showMessage('error', errorMessage);
+      }
+    } catch (err) {
+      showMessage('error', `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleDisableCollection = async () => {
+    if (!isDisableValid) return;
+
+    try {
+      const response = await fetch('/api/admin/collection/config', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          principalArn: disableForm.principalArn,
+          collectionType: disableForm.collectionType,
+        }),
+      });
+
+      const responseText = await response.text();
+      if (response.ok) {
+        showMessage('success', `Data collection disabled for ${disableForm.collectionType}`);
+        setDisableForm({ principalArn: '', collectionType: 'cost' });
+      } else {
+        let errorMessage = 'Failed to disable data collection';
+        try {
+          const error = JSON.parse(responseText);
+          errorMessage = error.Exception?.Message || error.message || errorMessage;
+        } catch {
+          errorMessage = `HTTP ${response.status}: ${responseText}`;
+        }
+        showMessage('error', errorMessage);
+      }
+    } catch (err) {
+      showMessage('error', `Network error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const checkboxStyle: React.CSSProperties = {
+    width: '18px',
+    height: '18px',
+    accentColor: '#2563eb',
+    cursor: 'pointer',
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Enable Data Collection</h3>
+        <p style={{ color: '#d1d5db', marginBottom: '24px' }}>
+          Enable background cost and/or resource inventory collection for a credential. The credential must have appropriate IAM
+          permissions (ce:GetCostAndUsage for cost, ec2/s3/lambda/rds describe/list for resources).
+        </p>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
+          <FocusInput
+            type="text"
+            placeholder="Principal ARN (e.g., arn:aws:iam::123456789012:role/MonitoringRole)"
+            value={enableForm.principalArn}
+            onChange={(e) => setEnableForm({ ...enableForm, principalArn: e.target.value })}
+            required
+          />
+          <div style={{ display: 'flex', gap: '24px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d1d5db', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={enableForm.costEnabled}
+                onChange={(e) => setEnableForm({ ...enableForm, costEnabled: e.target.checked })}
+                style={checkboxStyle}
+              />
+              Cost data collection
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d1d5db', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={enableForm.resourceEnabled}
+                onChange={(e) => setEnableForm({ ...enableForm, resourceEnabled: e.target.checked })}
+                style={checkboxStyle}
+              />
+              Resource inventory collection
+            </label>
+          </div>
+          <LoadingButton onClick={handleEnableCollection} disabled={!isEnableValid} variant="green">
+            Enable Collection
+          </LoadingButton>
+        </form>
+      </div>
+
+      <div style={cardStyle}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Disable Data Collection</h3>
+        <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
+          <FocusInput
+            type="text"
+            placeholder="Principal ARN"
+            value={disableForm.principalArn}
+            onChange={(e) => setDisableForm({ ...disableForm, principalArn: e.target.value })}
+            required
+          />
+          <div>
+            <label style={{ display: 'block', fontSize: '12px', color: '#9ca3af', marginBottom: '6px', fontWeight: 500 }}>
+              Collection Type
+            </label>
+            <select
+              value={disableForm.collectionType}
+              onChange={(e) => setDisableForm({ ...disableForm, collectionType: e.target.value })}
+              style={{
+                ...inputStyle,
+                cursor: 'pointer',
+              }}
+            >
+              <option value="cost">Cost</option>
+              <option value="resource">Resource</option>
+            </select>
+          </div>
+          <LoadingButton onClick={handleDisableCollection} disabled={!isDisableValid} variant="red">
+            Disable Collection
+          </LoadingButton>
+        </form>
+      </div>
     </div>
   );
 }

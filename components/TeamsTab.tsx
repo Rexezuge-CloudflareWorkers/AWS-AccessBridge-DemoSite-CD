@@ -1,0 +1,693 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
+interface Team {
+  id: string;
+  name: string;
+  createdBy: string;
+  createdAt: number;
+}
+
+interface TeamMember {
+  teamId: string;
+  userEmail: string;
+  role: string;
+  addedAt: number;
+}
+
+interface TeamsTabProps {
+  showMessage: (type: 'success' | 'error', text: string) => void;
+}
+
+const styles = {
+  card: {
+    background: '#1e2433',
+    borderRadius: '12px',
+    padding: '24px',
+  } as React.CSSProperties,
+  input: {
+    width: '100%',
+    padding: '12px',
+    background: '#252d3d',
+    borderRadius: '8px',
+    border: '1px solid #374151',
+    color: '#ffffff',
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.15s',
+  } as React.CSSProperties,
+  btnBlue: {
+    background: '#2563eb',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    color: 'white',
+    fontWeight: 500,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+  } as React.CSSProperties,
+  btnGreen: {
+    background: '#16a34a',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    color: 'white',
+    fontWeight: 500,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+  } as React.CSSProperties,
+  btnRed: {
+    background: '#dc2626',
+    padding: '10px 20px',
+    borderRadius: '8px',
+    color: 'white',
+    fontWeight: 500,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+  } as React.CSSProperties,
+  btnSmall: {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    color: 'white',
+    fontWeight: 500,
+    fontSize: '13px',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.15s',
+  } as React.CSSProperties,
+  tableCard: {
+    background: '#1e2433',
+    borderRadius: '12px',
+    overflow: 'hidden',
+  } as React.CSSProperties,
+  th: {
+    textAlign: 'left' as const,
+    padding: '12px',
+    background: '#252d3d',
+    color: '#9ca3af',
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.05em',
+    fontSize: '12px',
+    fontWeight: 500,
+  } as React.CSSProperties,
+  td: {
+    padding: '12px',
+    borderTop: '1px solid rgba(55,65,81,0.3)',
+  } as React.CSSProperties,
+};
+
+function FocusInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [focused, setFocused] = useState(false);
+  const { style: extraStyle, ...rest } = props;
+  return (
+    <input
+      {...rest}
+      style={{
+        ...styles.input,
+        borderColor: focused ? '#3b82f6' : '#374151',
+        ...extraStyle,
+      }}
+      onFocus={(e) => {
+        setFocused(true);
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        setFocused(false);
+        props.onBlur?.(e);
+      }}
+    />
+  );
+}
+
+async function apiCall(
+  url: string,
+  method: string,
+  body?: Record<string, unknown>,
+): Promise<{ ok: boolean; data?: Record<string, unknown>; error?: string }> {
+  try {
+    const opts: RequestInit = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const response = await fetch(url, opts);
+    const text = await response.text();
+    if (response.ok) {
+      return { ok: true, data: JSON.parse(text) };
+    }
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const err = JSON.parse(text);
+      errorMessage = err.Exception?.Message || err.message || errorMessage;
+    } catch {
+      errorMessage = `${errorMessage}: ${text}`;
+    }
+    return { ok: false, error: errorMessage };
+  } catch (err) {
+    return { ok: false, error: `Network error: ${err instanceof Error ? err.message : 'Unknown error'}` };
+  }
+}
+
+export default function TeamsTab({ showMessage }: TeamsTabProps) {
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [accounts, setAccounts] = useState<string[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+
+  // Forms
+  const [createTeamName, setCreateTeamName] = useState('');
+  const [renameTeamName, setRenameTeamName] = useState('');
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberRole, setMemberRole] = useState('member');
+  const [accountId, setAccountId] = useState('');
+
+  const fetchTeams = useCallback(async () => {
+    setIsLoading(true);
+    const result = await apiCall('/api/admin/teams', 'GET');
+    if (result.ok && result.data) {
+      setTeams((result.data as { teams: Team[] }).teams || []);
+    } else {
+      showMessage('error', result.error || 'Failed to load teams');
+    }
+    setIsLoading(false);
+  }, [showMessage]);
+
+  useEffect(() => {
+    fetchTeams();
+  }, [fetchTeams]);
+
+  const fetchMembers = useCallback(
+    async (teamId: string) => {
+      setMembersLoading(true);
+      const result = await apiCall(`/api/admin/team/members?teamId=${teamId}`, 'GET');
+      if (result.ok && result.data) {
+        setMembers((result.data as { members: TeamMember[] }).members || []);
+      } else {
+        showMessage('error', result.error || 'Failed to load members');
+      }
+      setMembersLoading(false);
+    },
+    [showMessage],
+  );
+
+  const fetchAccounts = useCallback(
+    async (teamId: string) => {
+      setAccountsLoading(true);
+      const result = await apiCall(`/api/admin/team/accounts?teamId=${teamId}`, 'GET');
+      if (result.ok && result.data) {
+        setAccounts((result.data as { accountIds: string[] }).accountIds || []);
+      } else {
+        showMessage('error', result.error || 'Failed to load accounts');
+      }
+      setAccountsLoading(false);
+    },
+    [showMessage],
+  );
+
+  const selectTeam = useCallback(
+    (teamId: string) => {
+      setSelectedTeamId(teamId);
+      setMembers([]);
+      setAccounts([]);
+      const team = teams.find((t) => t.id === teamId);
+      setRenameTeamName(team?.name || '');
+      fetchMembers(teamId);
+      fetchAccounts(teamId);
+    },
+    [teams, fetchMembers, fetchAccounts],
+  );
+
+  const handleCreateTeam = async () => {
+    if (!createTeamName.trim()) return;
+    const result = await apiCall('/api/admin/team', 'POST', { teamName: createTeamName.trim() });
+    if (result.ok) {
+      showMessage('success', 'Team created successfully');
+      setCreateTeamName('');
+      fetchTeams();
+    } else {
+      showMessage('error', result.error || 'Failed to create team');
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    const result = await apiCall('/api/admin/team', 'DELETE', { teamId });
+    if (result.ok) {
+      showMessage('success', 'Team deleted successfully');
+      if (selectedTeamId === teamId) {
+        setSelectedTeamId(null);
+        setMembers([]);
+        setAccounts([]);
+      }
+      fetchTeams();
+    } else {
+      showMessage('error', result.error || 'Failed to delete team');
+    }
+  };
+
+  const handleRenameTeam = async () => {
+    if (!selectedTeamId || !renameTeamName.trim()) return;
+    const result = await apiCall('/api/admin/team/name', 'PUT', { teamId: selectedTeamId, teamName: renameTeamName.trim() });
+    if (result.ok) {
+      showMessage('success', 'Team renamed successfully');
+      fetchTeams();
+    } else {
+      showMessage('error', result.error || 'Failed to rename team');
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!selectedTeamId || !memberEmail.trim()) return;
+    const result = await apiCall('/api/admin/team/member', 'POST', {
+      teamId: selectedTeamId,
+      userEmail: memberEmail.trim(),
+      role: memberRole,
+    });
+    if (result.ok) {
+      showMessage('success', 'Member added successfully');
+      setMemberEmail('');
+      setMemberRole('member');
+      fetchMembers(selectedTeamId);
+    } else {
+      showMessage('error', result.error || 'Failed to add member');
+    }
+  };
+
+  const handleRemoveMember = async (email: string) => {
+    if (!selectedTeamId) return;
+    const result = await apiCall('/api/admin/team/member', 'DELETE', { teamId: selectedTeamId, userEmail: email });
+    if (result.ok) {
+      showMessage('success', 'Member removed successfully');
+      fetchMembers(selectedTeamId);
+    } else {
+      showMessage('error', result.error || 'Failed to remove member');
+    }
+  };
+
+  const handleUpdateRole = async (email: string, newRole: string) => {
+    if (!selectedTeamId) return;
+    const result = await apiCall('/api/admin/team/member/role', 'PUT', {
+      teamId: selectedTeamId,
+      userEmail: email,
+      role: newRole,
+    });
+    if (result.ok) {
+      showMessage('success', 'Role updated successfully');
+      fetchMembers(selectedTeamId);
+    } else {
+      showMessage('error', result.error || 'Failed to update role');
+    }
+  };
+
+  const handleAddAccount = async () => {
+    if (!selectedTeamId || !accountId.trim()) return;
+    const result = await apiCall('/api/admin/team/account', 'POST', { teamId: selectedTeamId, awsAccountId: accountId.trim() });
+    if (result.ok) {
+      showMessage('success', 'Account added to team');
+      setAccountId('');
+      fetchAccounts(selectedTeamId);
+    } else {
+      showMessage('error', result.error || 'Failed to add account');
+    }
+  };
+
+  const handleRemoveAccount = async (awsAccountId: string) => {
+    if (!selectedTeamId) return;
+    const result = await apiCall('/api/admin/team/account', 'DELETE', { teamId: selectedTeamId, awsAccountId });
+    if (result.ok) {
+      showMessage('success', 'Account removed from team');
+      fetchAccounts(selectedTeamId);
+    } else {
+      showMessage('error', result.error || 'Failed to remove account');
+    }
+  };
+
+  const formatTimestamp = (ts: number): string => new Date(ts * 1000).toLocaleDateString();
+
+  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      {/* Create Team */}
+      <div style={styles.card}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Create Team</h3>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleCreateTeam();
+          }}
+          style={{ display: 'flex', gap: '12px', alignItems: 'center' }}
+        >
+          <div style={{ flex: 1 }}>
+            <FocusInput
+              type="text"
+              placeholder="Team name"
+              value={createTeamName}
+              onChange={(e) => setCreateTeamName(e.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!createTeamName.trim()}
+            style={{
+              ...styles.btnGreen,
+              opacity: !createTeamName.trim() ? 0.5 : 1,
+              cursor: !createTeamName.trim() ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (createTeamName.trim()) e.currentTarget.style.background = '#15803d';
+            }}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#16a34a')}
+          >
+            Create Team
+          </button>
+        </form>
+      </div>
+
+      {/* Team List */}
+      <div style={styles.card}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Teams</h3>
+
+        {isLoading && (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div
+              className="animate-spin"
+              style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                border: '2px solid #60a5fa',
+                borderTopColor: 'transparent',
+                margin: '0 auto',
+              }}
+            />
+          </div>
+        )}
+
+        {!isLoading && teams.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: '#6b7280' }}>No teams found. Create one above.</div>
+        )}
+
+        {!isLoading && teams.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {teams.map((team) => (
+              <div
+                key={team.id}
+                onClick={() => selectTeam(team.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
+                  background: selectedTeamId === team.id ? 'rgba(37,99,235,0.15)' : '#252d3d',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  border: selectedTeamId === team.id ? '1px solid rgba(37,99,235,0.4)' : '1px solid transparent',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 500, color: '#ffffff' }}>{team.name}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                    Created by {team.createdBy} on {formatTimestamp(team.createdAt)}
+                  </div>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTeam(team.id);
+                  }}
+                  style={{ ...styles.btnSmall, background: '#dc2626' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = '#dc2626')}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Team Detail */}
+      {selectedTeam && (
+        <>
+          {/* Rename Team */}
+          <div style={styles.card}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>
+              Team Settings — {selectedTeam.name}
+            </h3>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleRenameTeam();
+              }}
+              style={{ display: 'flex', gap: '12px', alignItems: 'center' }}
+            >
+              <div style={{ flex: 1 }}>
+                <FocusInput
+                  type="text"
+                  placeholder="New team name"
+                  value={renameTeamName}
+                  onChange={(e) => setRenameTeamName(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name}
+                style={{
+                  ...styles.btnBlue,
+                  opacity: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name ? 0.5 : 1,
+                  cursor: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (renameTeamName.trim() && renameTeamName.trim() !== selectedTeam.name)
+                    e.currentTarget.style.background = '#1d4ed8';
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
+              >
+                Rename
+              </button>
+            </form>
+          </div>
+
+          {/* Members */}
+          <div style={styles.card}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Members</h3>
+
+            {/* Add member form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddMember();
+              }}
+              style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}
+            >
+              <div style={{ flex: 1 }}>
+                <FocusInput
+                  type="email"
+                  placeholder="User email"
+                  value={memberEmail}
+                  onChange={(e) => setMemberEmail(e.target.value)}
+                />
+              </div>
+              <select
+                value={memberRole}
+                onChange={(e) => setMemberRole(e.target.value)}
+                style={{
+                  ...styles.input,
+                  width: 'auto',
+                  padding: '12px 16px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="member">Member</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button
+                type="submit"
+                disabled={!memberEmail.trim()}
+                style={{
+                  ...styles.btnGreen,
+                  opacity: !memberEmail.trim() ? 0.5 : 1,
+                  cursor: !memberEmail.trim() ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (memberEmail.trim()) e.currentTarget.style.background = '#15803d';
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#16a34a')}
+              >
+                Add Member
+              </button>
+            </form>
+
+            {membersLoading && (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div
+                  className="animate-spin"
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    border: '2px solid #60a5fa',
+                    borderTopColor: 'transparent',
+                    margin: '0 auto',
+                  }}
+                />
+              </div>
+            )}
+
+            {!membersLoading && members.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#6b7280', fontSize: '14px' }}>
+                No members yet. Add one above.
+              </div>
+            )}
+
+            {!membersLoading && members.length > 0 && (
+              <div style={styles.tableCard}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Email</th>
+                      <th style={styles.th}>Role</th>
+                      <th style={styles.th}>Added</th>
+                      <th style={{ ...styles.th, textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((m) => (
+                      <tr key={m.userEmail}>
+                        <td style={{ ...styles.td, color: '#d1d5db' }}>{m.userEmail}</td>
+                        <td style={styles.td}>
+                          <select
+                            value={m.role}
+                            onChange={(e) => handleUpdateRole(m.userEmail, e.target.value)}
+                            style={{
+                              background: '#252d3d',
+                              border: '1px solid #374151',
+                              borderRadius: '6px',
+                              color: '#ffffff',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              outline: 'none',
+                            }}
+                          >
+                            <option value="member">member</option>
+                            <option value="admin">admin</option>
+                          </select>
+                        </td>
+                        <td style={{ ...styles.td, color: '#6b7280', fontSize: '13px' }}>{formatTimestamp(m.addedAt)}</td>
+                        <td style={{ ...styles.td, textAlign: 'right' }}>
+                          <button
+                            onClick={() => handleRemoveMember(m.userEmail)}
+                            style={{ ...styles.btnSmall, background: '#dc2626' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = '#dc2626')}
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Accounts */}
+          <div style={styles.card}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>AWS Accounts</h3>
+
+            {/* Add account form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAddAccount();
+              }}
+              style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}
+            >
+              <div style={{ flex: 1 }}>
+                <FocusInput
+                  type="text"
+                  placeholder="AWS Account ID (12 digits)"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                  pattern="[0-9]{12}"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!accountId.trim()}
+                style={{
+                  ...styles.btnGreen,
+                  opacity: !accountId.trim() ? 0.5 : 1,
+                  cursor: !accountId.trim() ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => {
+                  if (accountId.trim()) e.currentTarget.style.background = '#15803d';
+                }}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#16a34a')}
+              >
+                Add Account
+              </button>
+            </form>
+
+            {accountsLoading && (
+              <div style={{ textAlign: 'center', padding: '16px 0' }}>
+                <div
+                  className="animate-spin"
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    border: '2px solid #60a5fa',
+                    borderTopColor: 'transparent',
+                    margin: '0 auto',
+                  }}
+                />
+              </div>
+            )}
+
+            {!accountsLoading && accounts.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '16px 0', color: '#6b7280', fontSize: '14px' }}>
+                No accounts assigned yet. Add one above.
+              </div>
+            )}
+
+            {!accountsLoading && accounts.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {accounts.map((acct) => (
+                  <div
+                    key={acct}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 16px',
+                      background: '#252d3d',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <span className="font-mono" style={{ color: '#d1d5db' }}>
+                      {acct}
+                    </span>
+                    <button
+                      onClick={() => handleRemoveAccount(acct)}
+                      style={{ ...styles.btnSmall, background: '#dc2626' }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = '#dc2626')}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
