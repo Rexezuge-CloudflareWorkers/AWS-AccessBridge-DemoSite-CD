@@ -2,581 +2,413 @@
 
 ![Accounts Page Preview](https://raw.githubusercontent.com/Rexezuge-CloudflareWorkers/AWS-AccessBridge-Assets/refs/heads/main/pictures/3.jpg)
 
-A secure, web-based AWS role assumption bridge built on Cloudflare Workers that simplifies AWS multi-account access management. This application provides a centralized interface for users to assume AWS roles across multiple accounts and generate AWS Console URLs with temporary credentials.
+**A self-hosted AWS multi-account access portal that runs on Cloudflare Workers.** Give your team a single place to sign into any AWS account, see which roles they can assume, track cloud spend, and manage access — all gated behind your existing Cloudflare Zero Trust identity provider.
 
-[Live Demo Site](https://aws-access-bridge.220cbb9e01920558e6d2862ebf66b298.workers.dev/)
+**[→ Try the live demo](https://aws-access-bridge.220cbb9e01920558e6d2862ebf66b298.workers.dev/)**
 
-## Table of Contents
+---
 
-_(Click on any section to expand/collapse)_
+## Why AWS AccessBridge?
 
-- [Overview](#overview)
-- [API Endpoints](#api-endpoints)
-- [Prerequisites](#prerequisites)
-- [Deployment](#deployment)
-- [AWS IAM Setup](#aws-iam-setup)
-- [Development](#development)
-- [Security Considerations](#security-considerations)
-- [Contributing](#contributing)
-- [License](#license)
-- [Support](#support)
+Managing IAM access across many AWS accounts is painful:
 
-<details open>
-<summary>Overview (click to expand/collapse)</summary>
+- You want engineers to sign in with **one identity** (Google, Okta, GitHub, etc.) instead of juggling IAM users per account.
+- You don't want to pay for or operate AWS IAM Identity Center.
+- You want **fine-grained control** over which person can see which role in which account.
+- You want **visibility** into cost, resources, and who-did-what — without wiring up five different AWS services.
 
-AWS Access Bridge is a full-stack application that consists of:
+AWS AccessBridge is a single Cloudflare Worker that gives your team a web UI for exactly that. It uses your Cloudflare Zero Trust login, stores AWS credentials encrypted in Cloudflare D1, and hands out short-lived session credentials on demand.
 
-- **Backend API**: Built with Hono framework running on Cloudflare Workers
-- **Frontend Web App**: React 19-based SPA with Tailwind CSS v4 styling
-- **Database**: Cloudflare D1 with encrypted credential storage
-- **Authentication**: Cloudflare Zero Trust integration for secure access control
-- **Security**: AES-GCM encryption for sensitive credential data
+---
 
-### Key Features
+## Features
 
-- **Role Assumption**: Securely assume AWS roles across multiple accounts
-- **Console URL Generation**: Generate temporary AWS Console login URLs
-- **User Management**: Email-based user authentication via Cloudflare Zero Trust
-- **Role Mapping**: Configure which users can assume which roles
-- **Account Management**: AWS account nicknames and user favorites
-- **Role Visibility Control**: Hide/unhide roles for individual users
-- **Super Admin System**: Enhanced administrative privileges with user metadata
-- **Credential Chain Management**: Support for complex credential relationships
-- **Credential Encryption**: AES-GCM encrypted storage of AWS credentials
-- **Admin Interface**: Comprehensive administrative endpoints for user and credential management
-- **OpenAPI Documentation**: Auto-generated API documentation at `/docs`
+### Access & Role Assumption
 
-### Architecture
+- **One-click AWS Console sign-in** — pick an account, pick a role, land in the Console with temporary credentials.
+- **Programmatic credentials** — get short-lived `access_key_id` / `secret_access_key` / `session_token` for the CLI or SDKs.
+- **Multi-hop role chains** — chain credentials across accounts (base IAM user → intermediate role → target role) up to your configured chain depth.
+- **Per-user role visibility** — control exactly which roles each user can see and assume, and let users hide roles they don't want cluttering their view.
+- **Favorites** — users can pin their most-used accounts to the top.
+- **Personal access tokens** — users can mint scoped PATs for use in scripts and CI.
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   React 19 SPA  │───▶│ Cloudflare       │───▶│   AWS STS       │
-│   (Frontend)    │    │ Workers API      │    │   (Role         │
-│   + Tailwind v4 │    │ (Hono + Chanfana)│    │   Assumption)   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌──────────────────┐
-                       │   Cloudflare D1  │
-                       │   (Encrypted DB) │
-                       └──────────────────┘
-                              │
-                              ▼
-                       ┌──────────────────┐
-                       │ Cloudflare Zero  │
-                       │ Trust (Auth)     │
-                       └──────────────────┘
-```
+### Team Workspaces
 
-</details>
+- Multi-tenant **teams** with admin/member roles.
+- Scope AWS accounts to specific teams so only team members see them.
+- Per-team admin controls for member and account membership.
 
-<details open>
-<summary>API Endpoints (click to expand/collapse)</summary>
+### Cost & Resource Insights
 
-### AWS Operations
+- **Cost dashboard** — daily/weekly/monthly spend by account, trend charts, and total-spend cards powered by AWS Cost Explorer.
+- **Spend alerts** — configurable thresholds that notify when an account crosses a dollar limit.
+- **Resource inventory** — paginated, filterable view of EC2 instances, S3 buckets, Lambda functions, and RDS databases across every connected account, refreshed in the background.
 
-- `POST /api/aws/console` - Generate AWS Console URL with temporary credentials
-- `POST /api/aws/assume-role` - Assume an AWS role and return temporary credentials
-- `GET /api/aws/federate` - Federate to AWS Console with temporary credentials
+### Admin & Governance
 
-### User Operations
+- **Guided onboarding wizard** — a 6-step in-app flow (Account → Credentials → Chain → Roles → Users → Summary) that walks a new admin through their first account and first user grant.
+- **Credential validation & chain testing** — verify credentials and simulate a full assumption chain before you grant access.
+- **IAM role discovery** — list all IAM roles in a connected account so you can pick assumable ones from a dropdown instead of typing ARNs.
+- **Account nicknames** — give AWS account IDs human-friendly names.
+- **Role configs** — per-role default Console deep-link path and region.
+- **Audit log viewer** — filterable, paginated view of every API action taken through AccessBridge, with configurable retention.
 
-- `GET /api/user/me` - Get current user information
-- `GET /api/user/assumables` - List roles that the current user can assume
-- `GET /api/user/favorites` - Get user's favorite AWS accounts
-- `POST /api/user/favorites` - Add account to favorites
-- `DELETE /api/user/favorites` - Remove account from favorites
-- `POST /api/user/assumable/hidden` - Hide a role from user's view
-- `DELETE /api/user/assumable/hidden` - Unhide a role for user's view
+### Security
 
-### Admin Operations
+- **Cloudflare Zero Trust** enforces identity at the edge — AccessBridge never handles passwords or OIDC directly.
+- **AES-GCM encryption** for all stored AWS credentials, with the key held in Cloudflare Secrets Store.
+- **HMAC-signed internal requests** between worker components, with a 1-second timestamp window to block replay.
+- **Every API call is audit-logged** automatically and retained for the period you configure.
+- **Demo mode** flag disables all admin write operations — safe for public demo deployments.
 
-- `POST /api/admin/credentials` - Store AWS credentials
-- `POST /api/admin/credentials/relationship` - Create credential chain relationships
-- `DELETE /api/admin/credentials/relationship` - Remove credential chain relationships
-- `POST /api/admin/access` - Grant user access to roles
-- `DELETE /api/admin/access` - Revoke user access to roles
-- `PUT /api/admin/account/nickname` - Set AWS account nickname
-- `DELETE /api/admin/account/nickname` - Remove AWS account nickname
-- `POST /api/admin/crypto/rotate-master-key` - Initialize/rotate the encryption key
+---
 
-### Documentation
+## Getting Started
 
-- `GET /docs` - OpenAPI documentation
+Deployment has two halves: standing up the Cloudflare side (where the app lives), and configuring the AWS side (where the roles live). The in-app onboarding wizard handles most of the AWS-side work after the first deploy.
 
-</details>
+### Prerequisites
 
-<details open>
-<summary>Prerequisites (click to expand/collapse)</summary>
+- **Cloudflare account** with Workers, D1, KV, Secrets Store, and Zero Trust enabled
+- **Node.js 18+** (CI uses Node 24)
+- **AWS account(s)** where you want to grant access
+- Your own domain on Cloudflare (recommended, for Zero Trust-protected routes)
 
-- Node.js 18+ and npm
-- Cloudflare account with Workers, D1, and Zero Trust enabled
-- Wrangler CLI installed globally: `npm install -g wrangler`
-- AWS accounts and roles configured for cross-account access
-- Cloudflare Zero Trust team configured for application security
+---
 
-</details>
+## Deployment Guide — Manual (Local)
 
-<details open>
-<summary>Deployment (click to expand/collapse)</summary>
+Use this path the first time you deploy, or if you don't want to use GitHub Actions. All commands are run from the project root.
 
-### 1. Install Dependencies
+### Step 1. Clone and install
 
 ```bash
+git clone https://github.com/<your-username>/AWS-AccessBridge.git
+cd AWS-AccessBridge
 npm install
-```
-
-### 2. Authenticate with Cloudflare
-
-Authenticate Wrangler with your Cloudflare account:
-
-```bash
 npx wrangler login
 ```
 
-### 3. Create Cloudflare D1 Database
+Verify you're authenticated with the right account:
 
-Create a new D1 database:
+```bash
+npx wrangler whoami
+```
+
+### Step 2. Create the Cloudflare resources
+
+AccessBridge needs one D1 database, one KV namespace, and one Secrets Store with two secrets inside it. Create them in any order.
+
+**D1 database:**
 
 ```bash
 npx wrangler d1 create aws-access-bridge-db
 ```
 
-Update the `database_id` field in `wrangler.jsonc` with the new database ID returned from the command above.
+Copy the `database_id` from the output.
 
-### 4. Create Cloudflare Secrets Store
-
-Create a secrets store for encryption keys:
+**KV namespace (for credential cache):**
 
 ```bash
-npx wrangler secret-store create aws-access-bridge-secrets
+npx wrangler kv namespace create AccessBridgeKV
 ```
 
-Create the AES encryption key secret:
+Copy the `id` from the output.
+
+**Secrets Store + two secrets:**
 
 ```bash
-# Create the AES encryption secret (you'll be prompted to enter the key value)
-npx wrangler secret-store put aws-access-bridge-aes-encryption-key --store-id YOUR_STORE_ID
-
-# Create the HMAC secret for internal request validation
-node scripts/setup-hmac-secret.js
-npx wrangler secret-store put aws-access-bridge-internal-hmac-secret --store-id YOUR_STORE_ID
-
-# Call the rotate-master-key endpoint to initialize the encryption key
-curl -X POST https://your-worker-domain.workers.dev/api/admin/rotate-master-key
+npx wrangler secrets-store store create aws-access-bridge-secrets
 ```
 
-Update the `store_id` field in `wrangler.jsonc` with your secrets store ID.
+Copy the store ID. You can generate the two secret values automatically by running the project's setup script (recommended) — see Step 3.
 
-### 5. Run Database Migrations
+### Step 3. Create `wrangler.jsonc`
 
-Initialize the database schema:
+Copy the template and fill in the IDs from Step 2:
+
+```bash
+cp wrangler.jsonc.template wrangler.jsonc
+```
+
+Open `wrangler.jsonc` and replace every placeholder (the `0000…` strings) with the real IDs:
+
+- `d1_databases[0].database_id` → your D1 ID
+- `kv_namespaces[0].id` → your KV ID
+- Both `secrets_store_secrets[*].store_id` → your Secrets Store ID
+
+Then generate and upload the two secrets in one go:
+
+```bash
+npx tsx scripts/init-secrets.ts
+```
+
+This script reads `wrangler.jsonc`, detects the two expected secrets (`aws-access-bridge-aes-encryption-key`, `aws-access-bridge-internal-hmac-secret`), generates cryptographically strong values for each, and uploads them to the store. Re-running it is a no-op — it skips any secret that already exists.
+
+If you'd rather generate the secrets yourself:
+
+```bash
+# AES-GCM 256-bit key (base64)
+openssl rand -base64 32 | npx wrangler secrets-store secret create <STORE_ID> \
+  --name aws-access-bridge-aes-encryption-key --scopes workers --remote
+
+# HMAC secret (base64)
+openssl rand -base64 32 | npx wrangler secrets-store secret create <STORE_ID> \
+  --name aws-access-bridge-internal-hmac-secret --scopes workers --remote
+```
+
+### Step 4. Wire up Cloudflare Zero Trust
+
+1. Open the [Zero Trust dashboard](https://one.dash.cloudflare.com/) → **Access → Applications → Add an application → Self-hosted**.
+2. Fill in:
+   - **Application name**: AWS AccessBridge
+   - **Subdomain + domain**: whatever URL your worker will live at
+   - **Session duration**: 8 hours is a good default
+3. On the next screen, create at least one **Access policy**:
+   - **Action**: Allow
+   - **Include**: the emails, email domains, or IdP groups that should be allowed in.
+4. Finish creating the application, then open its overview and copy the **Application Audience (AUD) tag**.
+5. Also note your **team domain** (e.g. `https://acme.cloudflareaccess.com`).
+
+Put both into `wrangler.jsonc` under `vars`:
+
+```jsonc
+"vars": {
+  "POLICY_AUD": "abcdef…the AUD tag…",
+  "TEAM_DOMAIN": "https://acme.cloudflareaccess.com",
+  // ...
+}
+```
+
+### Step 5. Apply database migrations
 
 ```bash
 npx wrangler d1 migrations apply --remote aws-access-bridge-db
 ```
 
-This creates the following tables:
+You should see the 26 migration files apply cleanly. Re-running is safe.
 
-- `credentials`: Stores encrypted AWS credentials and role chains
-- `assumable_roles`: Maps users to roles they can assume (with hidden field)
-- `aws_accounts`: Stores AWS account nicknames
-- `user_favorite_accounts`: Tracks user's favorite accounts
-- `user_metadata`: Stores user metadata including super admin status
-
-### 6. Configure Environment
-
-Update `wrangler.jsonc` with your specific configuration:
-
-```jsonc
-{
-  "name": "aws-access-bridge",
-  "d1_databases": [
-    {
-      "binding": "AccessBridgeDB",
-      "database_name": "aws-access-bridge-db",
-      "database_id": "your-database-id",
-    },
-  ],
-  "secrets_store_secrets": [
-    {
-      "binding": "AES_ENCRYPTION_KEY_SECRET",
-      "store_id": "your-secrets-store-id",
-      "secret_name": "aws-access-bridge-aes-encryption-key",
-    },
-  ],
-  "vars": {
-    "POLICY_AUD": "your-cloudflare-zero-trust-application-aud",
-    "TEAM_DOMAIN": "https://your-team.cloudflareaccess.com",
-  },
-}
-```
-
-### 6. Configure Cloudflare Zero Trust
-
-Secure your application with Cloudflare Zero Trust:
-
-1. **Create a Zero Trust Team**:
-   - Go to [Cloudflare Zero Trust dashboard](https://one.dash.cloudflare.com/)
-   - Create a new team if you don't have one
-   - Note your team domain (e.g., `your-team.cloudflareaccess.com`)
-
-2. **Create an Access Application**:
-   - Navigate to Access > Applications
-   - Click "Add an application" > "Self-hosted"
-   - Configure the application:
-     - **Application name**: AWS Access Bridge
-     - **Subdomain**: Choose a subdomain for your app
-     - **Domain**: Select your Cloudflare domain
-     - **Path**: Leave blank to protect the entire application
-
-3. **Configure Access Policies**:
-   - Create policies to control who can access the application
-   - Example policy for email-based access:
-     - **Policy name**: Authorized Users
-     - **Action**: Allow
-     - **Include**: Emails - add authorized user email addresses
-   - Save the policy and application
-
-4. **Update Application Settings**:
-   - Enable "Accept all available identity providers" or configure specific providers
-   - Set session duration as needed (recommended: 8 hours)
-   - Enable "HTTP-only cookies" for additional security
-
-5. **Test Access**:
-   - Navigate to your application URL
-   - Verify that Zero Trust authentication is required
-   - Ensure authorized users can access the application
-
-### 7. Build and Deploy
-
-Build the frontend application:
-
-```bash
-npm run buildApp
-```
-
-Deploy to Cloudflare Workers:
+### Step 6. Build and deploy
 
 ```bash
 npm run deploy
 ```
 
-The deployment process includes:
+`npm run deploy` chains: prettier → lint → `vite build` → `wrangler deploy --dry-run` → `wrangler deploy`. If anything fails, nothing is deployed.
 
-1. Installing dependencies
-2. Code formatting and linting
-3. Building the React frontend
-4. Deploying to Cloudflare Workers
+When it succeeds, wrangler prints the deployed URL (either `*.workers.dev` or your custom route). Visit it — you should hit Cloudflare Zero Trust first, then land in AccessBridge.
 
-</details>
+### Step 7. Bootstrap the first superadmin
 
-<details open>
-<summary>AWS IAM Setup (click to expand/collapse)</summary>
-
-For security considerations, AWS Access Bridge implements an intermediate layer role assumption architecture. This setup requires creating specific IAM users and roles in your AWS account.
-
-### 1. Create IAM User
-
-Create an IAM user named `DO-NOT-DELETE-Federated-SSO-AccessBridge` with the following inline policy:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AssumeIntermediateRole",
-      "Effect": "Allow",
-      "Action": "sts:AssumeRole",
-      "Resource": ["arn:aws:iam::<your-aws-account>:role/DO-NOT-DELETE-AccessBridge-Intermediate"]
-    }
-  ]
-}
-```
-
-### 2. Create Access Key Pair
-
-1. Generate an access key pair for the IAM user created above
-2. Store the credentials using the API endpoint:
+The first user to sign in is just a normal user — you need to promote yourself once:
 
 ```bash
-curl -X POST https://your-worker-domain.workers.dev/api/admin/credentials \
-  -H "Content-Type: application/json" \
-  -d '{
-    "principal_arn": "arn:aws:iam::<your-aws-account>:user/DO-NOT-DELETE-Federated-SSO-AccessBridge",
-    "access_key_id": "YOUR_ACCESS_KEY_ID",
-    "secret_access_key": "YOUR_SECRET_ACCESS_KEY"
-  }'
+npx wrangler d1 execute aws-access-bridge-db --remote --command \
+  "INSERT INTO user_metadata (user_email, is_superadmin) VALUES ('you@example.com', 1) \
+   ON CONFLICT(user_email) DO UPDATE SET is_superadmin = 1;"
 ```
 
-### 3. Create Intermediate IAM Role
+Refresh the app and you'll see the **Admin** tab appear. From there, open **Setup Wizard** for the guided onboarding of your first AWS account.
 
-Create an IAM role named `DO-NOT-DELETE-AccessBridge-Intermediate` with the following trust policy (replace `<your-aws-account>` with your actual AWS account ID):
+---
+
+## Deployment Guide — GitHub Actions (CI/CD)
+
+The repo ships with a deploy workflow at `.github/workflows/deploy-cloudflare-worker.yml` that runs on every push to `main`. This is the recommended path for forks — push to your fork's main and your worker redeploys automatically.
+
+### One-time setup for your fork
+
+1. **Fork the repository** on GitHub.
+
+2. **Run Steps 1–5 of the manual guide once locally** (clone, install, create Cloudflare resources, set up Zero Trust, apply migrations). You need a working `wrangler.jsonc` to continue.
+
+3. **Create a Cloudflare API token** with these permissions:
+   - Account → Workers Scripts: Edit
+   - Account → Workers KV Storage: Edit
+   - Account → D1: Edit
+   - Account → Cloudflare Secrets Store: Edit
+   - Zone → Workers Routes: Edit (only if using custom routes)
+
+   [Create API token](https://dash.cloudflare.com/profile/api-tokens).
+
+4. **Add GitHub Secrets** to your fork (`Settings → Secrets and variables → Actions → Secrets`):
+   - `CLOUDFLARE_API_TOKEN` — the token from step 3
+   - `CLOUDFLARE_ACCOUNT_ID` — your Cloudflare account ID
+
+5. **Add a GitHub Variable** (not a secret — `Settings → Secrets and variables → Actions → Variables`):
+   - `WRANGLER_JSONC` — paste the **entire contents** of your local `wrangler.jsonc` here.
+
+   The workflow writes this out to `wrangler.jsonc` at the start of each run (since `wrangler.jsonc` itself is gitignored).
+
+6. **Push to `main`**. The `Deploy Cloudflare Worker` workflow kicks off automatically and will:
+   - Validate that `WRANGLER_JSONC`'s `$version` is at least the template's `$minimumVersion`
+   - Initialize any missing secrets via `scripts/init-secrets.ts`
+   - Apply pending D1 migrations to your remote database
+   - Build the Vite SPA
+   - Hide the OpenNext config files (so wrangler doesn't OOM trying to build the Next.js path on the CI runner)
+   - Run `wrangler deploy`
+
+You can also trigger the workflow manually via **Actions → Deploy Cloudflare Worker → Run workflow**.
+
+### Keeping `WRANGLER_JSONC` up to date
+
+The template evolves (new bindings, new vars). If CI fails with a "version below minimum" error, update the `$version` and any new fields in your `WRANGLER_JSONC` GitHub variable to match the latest `wrangler.jsonc.template`.
+
+---
+
+## AWS IAM Setup (Recommended: Intermediate-Role Pattern)
+
+For the best security posture, have AccessBridge assume an intermediate role instead of giving its base IAM user broad permissions. The onboarding wizard nudges you toward this pattern, but here's the full picture.
+
+### 1. Base IAM user
+
+Create an IAM user with permission to assume **only** the intermediate role:
+
+```
+Name: DO-NOT-DELETE-Federated-SSO-AccessBridge
+Permissions (inline policy):
+  sts:AssumeRole → arn:aws:iam::<account>:role/DO-NOT-DELETE-AccessBridge-Intermediate
+```
+
+Generate an access key pair for this user and paste it into AccessBridge (Admin → Credentials, or via the Setup Wizard).
+
+### 2. Intermediate role
+
+Create a role trusted by the user above, with permission to assume target roles:
+
+```
+Name: DO-NOT-DELETE-AccessBridge-Intermediate
+Trust policy: allow the base IAM user to AssumeRole
+Permission policy:
+  sts:AssumeRole → arn:aws:iam::<account>:role/*
+```
+
+### 3. Target roles
+
+For every role your team actually uses, update the trust policy to allow the intermediate role:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::<your-aws-account>:user/DO-NOT-DELETE-Federated-SSO-AccessBridge"
-      },
-      "Action": "sts:AssumeRole",
-      "Condition": {}
-    }
-  ]
+  "Effect": "Allow",
+  "Principal": { "AWS": "arn:aws:iam::<account>:role/DO-NOT-DELETE-AccessBridge-Intermediate" },
+  "Action": "sts:AssumeRole"
 }
 ```
 
-And the following permissions policy:
+### Why bother with the intermediate role?
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AssumeAnyRole",
-      "Effect": "Allow",
-      "Action": "sts:AssumeRole",
-      "Resource": ["arn:aws:iam::<your-aws-account>:role/*"]
-    }
-  ]
-}
-```
+- **Small blast radius** — the long-lived IAM user can only do one thing: call `AssumeRole` on the intermediate.
+- **Clean audit trail** — every access shows up in CloudTrail as intermediate → target.
+- **One principal to trust** — existing target roles only need to trust the intermediate role, not a user or an external SSO principal.
 
-### 4. Configure Target Roles
+---
 
-For each role that users should be able to assume through Access Bridge, ensure the role's trust policy allows the intermediate role to assume it:
+## Running the Onboarding Wizard
 
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "AWS": "arn:aws:iam::<your-aws-account>:role/DO-NOT-DELETE-AccessBridge-Intermediate"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-```
+Open the app → **Admin → Setup Wizard**. The 6 steps are:
 
-### Security Benefits
+| Step            | What you do                                                                  |
+| --------------- | ---------------------------------------------------------------------------- |
+| 1. Account      | Enter an AWS account ID and a friendly nickname.                             |
+| 2. Credentials  | Paste the base IAM user access key + secret.                                 |
+| 3. Chain        | Optionally add the intermediate role ARN. Test the full chain before saving. |
+| 4. Roles        | The app lists IAM roles in the account — pick which ones should be assumable. |
+| 5. Users        | Grant specific users access to specific roles.                               |
+| 6. Summary      | Review everything and commit.                                                |
 
-This intermediate layer approach provides several security advantages:
+After the first account, you can repeat for additional accounts from the same Admin panel, or use the rest of the admin tabs directly without the wizard.
 
-- **Credential Isolation**: The base IAM user has minimal permissions
-- **Centralized Control**: All role assumptions go through the intermediate role
-- **Audit Trail**: Clear separation between the bridge service and target roles
-- **Reduced Attack Surface**: Limits the scope of potential credential compromise
+---
 
-</details>
+## Environment Variables
 
-<details open>
-<summary>Development (click to expand/collapse)</summary>
+All of these live in `wrangler.jsonc` under `vars`.
 
-### Project Structure
+| Variable                      | Purpose                                                                 | Default  |
+| ----------------------------- | ----------------------------------------------------------------------- | -------- |
+| `POLICY_AUD`                  | Cloudflare Zero Trust Application Audience tag — required for auth.     | —        |
+| `TEAM_DOMAIN`                 | Your Zero Trust team domain (e.g. `https://acme.cloudflareaccess.com`). | —        |
+| `MAX_TOKENS_PER_USER`         | How many active Personal Access Tokens a user can hold.                 | `5`      |
+| `MAX_TOKEN_EXPIRY_DAYS`       | Max expiry a user can set on a PAT.                                     | `90`     |
+| `PRINCIPAL_TRUST_CHAIN_LIMIT` | Max depth of role assumption chain.                                     | `3`      |
+| `AUDIT_LOG_RETENTION_DAYS`    | How long to keep audit log entries.                                     | `90`     |
+| `DEMO_MODE`                   | When `"true"`, all admin write operations are blocked. Safe for public demos. | `"false"` |
 
-```
-├── src/                    # Backend API source code
-│   ├── dao/               # Data Access Objects
-│   ├── endpoints/         # API route handlers
-│   │   └── api/          # API endpoints
-│   │       ├── admin/    # Admin operations
-│   │       ├── aws/      # AWS operations
-│   │       └── user/     # User operations
-│   ├── error/            # Error handling
-│   ├── model/            # Data models and types
-│   ├── utils/            # Utility functions
-│   ├── crypto/           # Encryption utilities
-│   ├── workers/          # Worker implementations
-│   └── index.ts          # Main application entry
-├── app/                   # Frontend React application
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   └── App.tsx       # Main app component
-│   └── package.json      # Frontend dependencies
-├── migrations/           # Database migration files
-├── wrangler.jsonc       # Cloudflare Workers configuration
-└── package.json         # Backend dependencies and scripts
-```
+---
 
-### Local Development
+## Verifying the Deploy
 
-1. **Start the development server:**
-
-   ```bash
-   npx wrangler dev
-   ```
-
-2. **Build the frontend in watch mode:**
-
-   ```bash
-   cd app && npm run build -- --watch
-   ```
-
-3. **Run database migrations locally:**
-   ```bash
-   npx wrangler d1 migrations apply --local aws_access_bridge_db
-   ```
-
-### Available Scripts
-
-**Root level:**
-
-- `npm run buildApp` - Build the React frontend
-- `npm run deploy` - Deploy to Cloudflare Workers
-- `npm run prettier` - Format code
-- `npm run lint` - Lint TypeScript code
-- `npm run tsc` - Type check without emitting files
-- `npm run cf-typegen` - Generate Cloudflare Worker types
-
-**Frontend (app/):**
-
-- `npm run build` - Build for production
-- `npm run release` - Clean and build
-- `npm run prettier` - Format frontend code
-- `npm run lint` - Lint frontend code
-- `npm run cf-typegen` - Generate Cloudflare Worker types
-
-### Database Schema
-
-**credentials table:**
-
-```sql
-CREATE TABLE credentials (
-    principal_arn VARCHAR(256) PRIMARY KEY,
-    assumed_by VARCHAR(256),
-    encrypted_access_key_id VARCHAR(128),
-    encrypted_secret_access_key VARCHAR(256),
-    encrypted_session_token VARCHAR(2048),
-    salt VARCHAR(128)
-);
-```
-
-**assumable_roles table:**
-
-```sql
-CREATE TABLE assumable_roles (
-    user_email VARCHAR(120),
-    aws_account_id CHAR(12),
-    role_name VARCHAR(128),
-    hidden BOOLEAN DEFAULT FALSE,
-    PRIMARY KEY (user_email, aws_account_id, role_name),
-    FOREIGN KEY (user_email) REFERENCES user_metadata(user_email),
-    FOREIGN KEY (aws_account_id) REFERENCES aws_accounts(aws_account_id)
-);
-```
-
-**aws_accounts table:**
-
-```sql
-CREATE TABLE aws_accounts (
-    aws_account_id CHAR(12) PRIMARY KEY,
-    aws_account_nickname VARCHAR(255)
-);
-```
-
-**user_favorite_accounts table:**
-
-```sql
-CREATE TABLE user_favorite_accounts (
-    user_email VARCHAR(120),
-    aws_account_id CHAR(12),
-    PRIMARY KEY (user_email, aws_account_id),
-    FOREIGN KEY (user_email) REFERENCES user_metadata(user_email),
-    FOREIGN KEY (aws_account_id) REFERENCES aws_accounts(aws_account_id)
-);
-```
-
-**user_metadata table:**
-
-```sql
-CREATE TABLE user_metadata (
-    user_email VARCHAR(120) PRIMARY KEY,
-    is_superadmin BOOLEAN DEFAULT FALSE
-);
-```
-
-### Configuration Management
-
-1. **Add AWS Credentials**: Insert base AWS credentials into the `credentials` table
-2. **Configure User Access**: Add user email and role mappings to `assumable_roles` table
-3. **Set up Role Chains**: Configure complex role assumption chains in the credentials table
-
-### Testing
-
-Run the linter and formatter:
+After the first deploy, a few quick health checks:
 
 ```bash
-npm run prettier
-npm run lint
+# Does the worker respond? (You'll hit Zero Trust unless you're signed in.)
+curl -I https://<your-worker-url>/
+
+# Are there any errors in the worker log tail?
+npx wrangler tail
+
+# Is the scheduled handler working?
+curl "https://<your-worker-url>/__scheduled?cron=*/10+*+*+*+*"
+
+# Is the OpenAPI doc rendering?
+open https://<your-worker-url>/docs
 ```
 
-### Technology Stack
+## Troubleshooting
 
-**Backend:**
+- **"Unauthorized" on every request** — double-check `POLICY_AUD` and `TEAM_DOMAIN` match the Zero Trust application you created.
+- **Admin tab is missing** — you haven't been promoted to superadmin yet. See Step 7 of the manual guide.
+- **CI fails with "version below minimum"** — your `WRANGLER_JSONC` GitHub variable is stale. Diff it against `wrangler.jsonc.template` and bump the `$version` field.
+- **`wrangler deploy` OOMs in CI** — make sure the workflow's "Prepare for Deploy" step is hiding `open-next.config.ts` and `next.config.ts`. Without that, wrangler delegates to the OpenNext Next.js build which needs 2GB+ RAM.
+- **Credentials cached forever after rotating an IAM key** — the credential cache refresh task runs every 10 minutes. You can force it via `GET /__scheduled?cron=*/10+*+*+*+*`.
 
-- [Hono](https://hono.dev/) - Fast web framework for Cloudflare Workers
-- [Chanfana](https://chanfana.pages.dev/) - OpenAPI framework for Hono
-- [Zod](https://zod.dev/) - TypeScript-first schema validation
-- [aws4fetch](https://github.com/mhart/aws4fetch) - AWS request signing
-- TypeScript for type safety
+---
 
-**Frontend:**
+## Screenshots
 
-- React 19 with TypeScript
-- Tailwind CSS v4 for styling
-- Vite for build tooling
+![Account list](https://raw.githubusercontent.com/Rexezuge-CloudflareWorkers/AWS-AccessBridge-Assets/refs/heads/main/pictures/3.jpg)
 
-**Infrastructure:**
+_(More screenshots in the [assets repo](https://github.com/Rexezuge-CloudflareWorkers/AWS-AccessBridge-Assets).)_
 
-- Cloudflare Workers for serverless compute
-- Cloudflare D1 for SQL database
-- Cloudflare Zero Trust for authentication
-- Cloudflare Secrets Store for secure key management
+---
 
-</details>
+## Running Locally
 
-## Security Considerations
+```bash
+npm run dev          # Vite dev server for the frontend
+npx wrangler dev     # Local Cloudflare Workers runtime for the backend
+```
 
-- Application is protected by Cloudflare Zero Trust authentication
-- All AWS credentials are encrypted using AES-GCM and stored securely in Cloudflare D1
-- Internal requests are secured with HMAC-SHA256 signatures and timestamp validation (1-second window)
-- User authentication is required for all role assumptions
-- Role access is controlled via database mappings
-- Temporary credentials have limited lifespans
-- All API requests are validated and sanitized
-- Encryption keys are stored in Cloudflare Secrets Store
+Useful scripts:
 
-### HMAC Internal Request Security
+| Command            | What it does                                           |
+| ------------------ | ------------------------------------------------------ |
+| `npm run build`    | Format, lint, build the SPA, and dry-run wrangler      |
+| `npm run deploy`   | Build + `wrangler deploy`                              |
+| `npm run test`     | Run the vitest test suite                              |
+| `npm run tsc`      | Type-check frontend and backend tsconfigs              |
+| `npm run lint`     | ESLint autofix                                         |
+| `npm run prettier` | Prettier format                                        |
 
-Internal requests between worker components are secured using HMAC-SHA256 signatures that include:
+---
 
-- All X-Internal headers (sorted alphabetically)
-- Request timestamp in Unix milliseconds
-- SHA-256 hash of request body
-- Request path and HTTP method
+## Documentation
 
-Requests must be made within 1 second of the timestamp to prevent replay attacks.
+- **[`AGENTS.md`](./AGENTS.md)** — architecture, endpoint inventory, database layout, scheduled tasks, and everything else an LLM agent or new contributor needs to navigate the codebase.
+- **OpenAPI docs** — the running worker serves interactive API docs at **`/docs`**.
+
+---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes and add tests
-4. Run linting and formatting: `npm run prettier && npm run lint`
-5. Commit your changes: `git commit -am 'Add feature'`
-6. Push to the branch: `git push origin feature-name`
-7. Submit a pull request
+1. Fork the repository and create a feature branch.
+2. Make changes, add tests, and run `npm run build` (runs prettier + lint + dry deploy).
+3. Open a pull request.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+[MIT](./LICENSE)
 
 ## Support
 
-For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/Rexezuge-CloudflareWorkers/AWS-AccessBridge).
+For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/Rexezuge/AWS-AccessBridge).
