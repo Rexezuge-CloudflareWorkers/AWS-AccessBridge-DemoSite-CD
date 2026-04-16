@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import OnboardingWizard from './OnboardingWizard';
 import AuditLogsTab from './AuditLogsTab';
 import TeamsTab from './TeamsTab';
@@ -122,10 +122,10 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('wizard');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const showMessage = (type: 'success' | 'error', text: string) => {
+  const showMessage = useCallback((type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 5000);
-  };
+  }, []);
 
   const tabs = [
     { id: 'wizard', label: 'Setup Wizard' },
@@ -1011,8 +1011,8 @@ function DataCollectionTab({ showMessage }: { showMessage: (type: 'success' | 'e
       <div style={cardStyle}>
         <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Enable Data Collection</h3>
         <p style={{ color: '#d1d5db', marginBottom: '24px' }}>
-          Enable background cost and/or resource inventory collection for a credential. The credential must have appropriate IAM
-          permissions (ce:GetCostAndUsage for cost, ec2/s3/lambda/rds describe/list for resources).
+          Enable background cost and/or resource inventory collection for a credential. The credential must have appropriate IAM permissions
+          (ce:GetCostAndUsage for cost, ec2/s3/lambda/rds describe/list for resources).
         </p>
         <form style={{ display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={(e) => e.preventDefault()}>
           <FocusInput
