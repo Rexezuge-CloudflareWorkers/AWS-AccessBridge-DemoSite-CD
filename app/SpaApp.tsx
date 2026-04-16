@@ -23,7 +23,8 @@ const VIEW_TO_PATH: Record<View, string> = {
 };
 
 function getViewFromPath(): View {
-  return PATH_TO_VIEW[window.location.pathname] ?? 'accounts';
+  const path: string = window.location.pathname.replace(/\/$/, '') || '/';
+  return PATH_TO_VIEW[path] ?? 'accounts';
 }
 
 export default function SpaApp() {

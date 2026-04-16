@@ -28,7 +28,6 @@
   },
   "assets": {
     "directory": "./app/dist/",
-    "binding": "ASSETS",
   },
   "services": [
     {

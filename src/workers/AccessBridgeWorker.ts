@@ -133,13 +133,6 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.delete('/api/admin/team/account', RemoveTeamAccountRoute);
     openapi.get('/api/admin/team/accounts', ListTeamAccountsRoute);
 
-    // SPA catch-all: serve index.html for frontend routes that fall through the asset handler
-    app.get('*', async (c) => {
-      const url: URL = new URL(c.req.url);
-      url.pathname = '/index.html';
-      return c.env.ASSETS.fetch(new Request(url));
-    });
-
     this.app = openapi;
   }
 
