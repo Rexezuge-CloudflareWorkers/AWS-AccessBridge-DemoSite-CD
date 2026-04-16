@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import OnboardingWizard from './OnboardingWizard';
 import AuditLogsTab from './AuditLogsTab';
 import TeamsTab from './TeamsTab';
@@ -146,34 +147,37 @@ export default function AdminPage({ activeTab: activeTabProp, onTabChange }: Adm
 
   return (
     <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '32px 24px' }}>
-      {message && (
-        <div
-          className="animate-slide-down"
-          style={{
-            position: 'fixed',
-            top: '48px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 50,
-            padding: '12px 24px',
-            borderRadius: '12px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
-            background: message.type === 'success' ? 'rgba(22,163,74,0.9)' : 'rgba(220,38,38,0.9)',
-            backdropFilter: 'blur(8px)',
-            color: '#ffffff',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span>{message.text}</span>
-            <button
-              onClick={() => setMessage(null)}
-              style={{ color: 'rgba(255,255,255,0.8)', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      {message &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="animate-slide-down"
+            style={{
+              position: 'fixed',
+              top: '48px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 50,
+              padding: '12px 24px',
+              borderRadius: '12px',
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)',
+              background: message.type === 'success' ? 'rgba(22,163,74,0.9)' : 'rgba(220,38,38,0.9)',
+              backdropFilter: 'blur(8px)',
+              color: '#ffffff',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span>{message.text}</span>
+              <button
+                onClick={() => setMessage(null)}
+                style={{ color: 'rgba(255,255,255,0.8)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
 
       <div style={{ marginBottom: '32px' }}>
         <div

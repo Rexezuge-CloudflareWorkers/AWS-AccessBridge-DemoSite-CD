@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   accessKeyId: string;
@@ -94,7 +95,9 @@ export default function AccessKeyModal({ accessKeyId, secretAccessKey, sessionTo
     return () => window.removeEventListener('keydown', handleEsc);
   }, [onClose]);
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <div
       className="animate-backdrop-in"
       style={modalStyles.backdrop}
@@ -137,6 +140,7 @@ export default function AccessKeyModal({ accessKeyId, secretAccessKey, sessionTo
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
