@@ -307,14 +307,14 @@ For every role your team actually uses, update the trust policy to allow the int
 
 Open the app → **Admin → Setup Wizard**. The 6 steps are:
 
-| Step            | What you do                                                                  |
-| --------------- | ---------------------------------------------------------------------------- |
-| 1. Account      | Enter an AWS account ID and a friendly nickname.                             |
-| 2. Credentials  | Paste the base IAM user access key + secret.                                 |
-| 3. Chain        | Optionally add the intermediate role ARN. Test the full chain before saving. |
-| 4. Roles        | The app lists IAM roles in the account — pick which ones should be assumable. |
-| 5. Users        | Grant specific users access to specific roles.                               |
-| 6. Summary      | Review everything and commit.                                                |
+| Step           | What you do                                                                   |
+| -------------- | ----------------------------------------------------------------------------- |
+| 1. Account     | Enter an AWS account ID and a friendly nickname.                              |
+| 2. Credentials | Paste the base IAM user access key + secret.                                  |
+| 3. Chain       | Optionally add the intermediate role ARN. Test the full chain before saving.  |
+| 4. Roles       | The app lists IAM roles in the account — pick which ones should be assumable. |
+| 5. Users       | Grant specific users access to specific roles.                                |
+| 6. Summary     | Review everything and commit.                                                 |
 
 After the first account, you can repeat for additional accounts from the same Admin panel, or use the rest of the admin tabs directly without the wizard.
 
@@ -324,14 +324,14 @@ After the first account, you can repeat for additional accounts from the same Ad
 
 All of these live in `wrangler.jsonc` under `vars`.
 
-| Variable                      | Purpose                                                                 | Default  |
-| ----------------------------- | ----------------------------------------------------------------------- | -------- |
-| `POLICY_AUD`                  | Cloudflare Zero Trust Application Audience tag — required for auth.     | —        |
-| `TEAM_DOMAIN`                 | Your Zero Trust team domain (e.g. `https://acme.cloudflareaccess.com`). | —        |
-| `MAX_TOKENS_PER_USER`         | How many active Personal Access Tokens a user can hold.                 | `5`      |
-| `MAX_TOKEN_EXPIRY_DAYS`       | Max expiry a user can set on a PAT.                                     | `90`     |
-| `PRINCIPAL_TRUST_CHAIN_LIMIT` | Max depth of role assumption chain.                                     | `3`      |
-| `AUDIT_LOG_RETENTION_DAYS`    | How long to keep audit log entries.                                     | `90`     |
+| Variable                      | Purpose                                                                       | Default   |
+| ----------------------------- | ----------------------------------------------------------------------------- | --------- |
+| `POLICY_AUD`                  | Cloudflare Zero Trust Application Audience tag — required for auth.           | —         |
+| `TEAM_DOMAIN`                 | Your Zero Trust team domain (e.g. `https://acme.cloudflareaccess.com`).       | —         |
+| `MAX_TOKENS_PER_USER`         | How many active Personal Access Tokens a user can hold.                       | `5`       |
+| `MAX_TOKEN_EXPIRY_DAYS`       | Max expiry a user can set on a PAT.                                           | `90`      |
+| `PRINCIPAL_TRUST_CHAIN_LIMIT` | Max depth of role assumption chain.                                           | `3`       |
+| `AUDIT_LOG_RETENTION_DAYS`    | How long to keep audit log entries.                                           | `90`      |
 | `DEMO_MODE`                   | When `"true"`, all admin write operations are blocked. Safe for public demos. | `"false"` |
 
 ---
@@ -381,14 +381,14 @@ npx wrangler dev     # Local Cloudflare Workers runtime for the backend
 
 Useful scripts:
 
-| Command            | What it does                                           |
-| ------------------ | ------------------------------------------------------ |
-| `npm run build`    | Format, lint, build the SPA, and dry-run wrangler      |
-| `npm run deploy`   | Build + `wrangler deploy`                              |
-| `npm run test`     | Run the vitest test suite                              |
-| `npm run tsc`      | Type-check frontend and backend tsconfigs              |
-| `npm run lint`     | ESLint autofix                                         |
-| `npm run prettier` | Prettier format                                        |
+| Command            | What it does                                      |
+| ------------------ | ------------------------------------------------- |
+| `npm run build`    | Format, lint, build the SPA, and dry-run wrangler |
+| `npm run deploy`   | Build + `wrangler deploy`                         |
+| `npm run test`     | Run the vitest test suite                         |
+| `npm run tsc`      | Type-check frontend and backend tsconfigs         |
+| `npm run lint`     | ESLint autofix                                    |
+| `npm run prettier` | Prettier format                                   |
 
 ---
 
