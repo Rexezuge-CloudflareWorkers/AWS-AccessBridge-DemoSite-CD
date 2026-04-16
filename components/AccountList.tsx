@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import AccessKeyModal from './AccessKeyModal';
 
-type RoleMap = Record<string, { roles: string[]; nickname?: string; favorite: boolean }>;
+type RoleMap = Record<string, { roles: string[]; hiddenRoles?: string[]; nickname?: string; favorite: boolean }>;
 
 interface AccountListProps {
   showHidden: boolean;
@@ -113,6 +113,42 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
     }
   };
 
+  const toggleHidden = async (accountId: string, role: string, currentlyHidden: boolean) => {
+    const previous = rolesData[accountId];
+    if (!previous) return;
+
+    const nextRoles: string[] = currentlyHidden ? [...previous.roles, role] : previous.roles.filter((r) => r !== role);
+    const prevHidden: string[] = previous.hiddenRoles ?? [];
+    const nextHidden: string[] = currentlyHidden ? prevHidden.filter((r) => r !== role) : showHidden ? [...prevHidden, role] : prevHidden;
+
+    setRolesData((prev) => ({
+      ...prev,
+      [accountId]: { ...previous, roles: nextRoles, hiddenRoles: nextHidden },
+    }));
+
+    try {
+      const response = await fetch('/api/user/assumable/hidden', {
+        method: currentlyHidden ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ awsAccountId: accountId, roleName: role }),
+      });
+
+      if (response.status === 401) {
+        window.location.reload();
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = (await response.json().catch(() => null)) as { Exception?: { Message?: string } } | null;
+        throw new Error(errorData?.Exception?.Message || `Failed to ${currentlyHidden ? 'unhide' : 'hide'} role`);
+      }
+    } catch (error) {
+      setRolesData((prev) => ({ ...prev, [accountId]: previous }));
+      console.error(error);
+      alert(`Error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+    }
+  };
+
   const handleAccessKeys = async (accountId: string, role: string) => {
     const principalArn = `arn:aws:iam::${accountId}:role/${role}`;
     const loadingKey = `${accountId}-${role}`;
@@ -160,6 +196,7 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
   };
 
   const [hoveredRole, setHoveredRole] = useState<string | null>(null);
+  const [hoveredEye, setHoveredEye] = useState<string | null>(null);
 
   return (
     <div>
@@ -297,68 +334,106 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
                 {accountData.favorite ? '\u2B50' : '\u2606'}
               </button>
             </div>
-            <div
-              style={{
-                overflow: 'hidden',
-                transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out',
-                maxHeight: expanded[accountId] ? `${accountData.roles.length * 44 + 16}px` : '0px',
-                opacity: expanded[accountId] ? 1 : 0,
-              }}
-            >
-              <div style={{ marginLeft: '28px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {accountData.roles.map((role) => {
-                  const loadingKey = `${accountId}-${role}`;
-                  const isLoadingKeys = loadingKeys === loadingKey;
-                  const isLoadingConsole = loadingConsole === loadingKey;
-                  const isHovered = hoveredRole === loadingKey;
+            {(() => {
+              const allRoles: Array<{ name: string; hidden: boolean }> = [
+                ...accountData.roles.map((name) => ({ name, hidden: false })),
+                ...(accountData.hiddenRoles ?? []).map((name) => ({ name, hidden: true })),
+              ];
+              return (
+                <div
+                  style={{
+                    overflow: 'hidden',
+                    transition: 'max-height 0.2s ease-out, opacity 0.2s ease-out',
+                    maxHeight: expanded[accountId] ? `${allRoles.length * 44 + 16}px` : '0px',
+                    opacity: expanded[accountId] ? 1 : 0,
+                  }}
+                >
+                  <div style={{ marginLeft: '28px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {allRoles.map(({ name: role, hidden: roleHidden }) => {
+                      const loadingKey = `${accountId}-${role}`;
+                      const isLoadingKeys = loadingKeys === loadingKey;
+                      const isLoadingConsole = loadingConsole === loadingKey;
+                      const isHovered = hoveredRole === loadingKey;
+                      const isEyeHovered = hoveredEye === loadingKey;
 
-                  return (
-                    <div
-                      key={role}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: isHovered ? '#252d3d' : 'transparent',
-                        transition: 'background 0.15s',
-                      }}
-                      onMouseEnter={() => setHoveredRole(loadingKey)}
-                      onMouseLeave={() => setHoveredRole(null)}
-                    >
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (!isLoadingConsole) handleConsole(accountId, role);
-                        }}
-                        className={`transition-colors ${
-                          isLoadingConsole ? 'text-gray-400 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'
-                        }`}
-                        style={{ textDecoration: 'none' }}
-                      >
-                        {isLoadingConsole ? 'Opening Console...' : role}
-                      </a>
-                      <button
-                        className="text-sm"
-                        style={{
-                          transition: 'color 0.15s',
-                          color: isLoadingKeys ? '#9ca3af' : isHovered ? '#60a5fa' : '#6b7280',
-                          background: 'none',
-                          border: 'none',
-                          cursor: isLoadingKeys ? 'default' : 'pointer',
-                        }}
-                        onClick={() => handleAccessKeys(accountId, role)}
-                        disabled={isLoadingKeys}
-                      >
-                        {isLoadingKeys ? 'Loading...' : 'Access Keys'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                      return (
+                        <div
+                          key={role}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            background: isHovered ? '#252d3d' : 'transparent',
+                            transition: 'background 0.15s',
+                            opacity: roleHidden ? 0.55 : 1,
+                          }}
+                          onMouseEnter={() => setHoveredRole(loadingKey)}
+                          onMouseLeave={() => setHoveredRole(null)}
+                        >
+                          <a
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              if (!isLoadingConsole) handleConsole(accountId, role);
+                            }}
+                            className={`transition-colors ${
+                              isLoadingConsole ? 'text-gray-400 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'
+                            }`}
+                            style={{ textDecoration: 'none' }}
+                          >
+                            {isLoadingConsole ? 'Opening Console...' : role}
+                          </a>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <button
+                              onClick={() => toggleHidden(accountId, role, roleHidden)}
+                              onMouseEnter={() => setHoveredEye(loadingKey)}
+                              onMouseLeave={() => setHoveredEye(null)}
+                              title={roleHidden ? 'Unhide role' : 'Hide role'}
+                              aria-label={roleHidden ? 'Unhide role' : 'Hide role'}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: '24px',
+                                height: '24px',
+                                padding: 0,
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: isEyeHovered ? '#f87171' : '#6b7280',
+                                transition: 'color 0.15s',
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z" />
+                                <circle cx="12" cy="12" r="3" strokeLinecap="round" strokeLinejoin="round" />
+                                {roleHidden && <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />}
+                              </svg>
+                            </button>
+                            <button
+                              className="text-sm"
+                              style={{
+                                transition: 'color 0.15s',
+                                color: isLoadingKeys ? '#9ca3af' : isHovered ? '#60a5fa' : '#6b7280',
+                                background: 'none',
+                                border: 'none',
+                                cursor: isLoadingKeys ? 'default' : 'pointer',
+                              }}
+                              onClick={() => handleAccessKeys(accountId, role)}
+                              disabled={isLoadingKeys}
+                            >
+                              {isLoadingKeys ? 'Loading...' : 'Access Keys'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         ))}
 

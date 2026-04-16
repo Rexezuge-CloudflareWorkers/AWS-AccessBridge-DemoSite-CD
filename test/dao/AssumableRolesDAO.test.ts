@@ -70,21 +70,40 @@ describe('AssumableRolesDAO', () => {
     it('returns grouped roles by account', async () => {
       vi.mocked(mockStmt.all).mockResolvedValue({
         results: [
-          { aws_account_id: '111111111111', role_name: 'Admin', aws_account_nickname: 'Dev', is_favorite: 1 },
-          { aws_account_id: '111111111111', role_name: 'ReadOnly', aws_account_nickname: 'Dev', is_favorite: 1 },
-          { aws_account_id: '222222222222', role_name: 'Admin', aws_account_nickname: null, is_favorite: 0 },
+          { aws_account_id: '111111111111', role_name: 'Admin', hidden: 0, aws_account_nickname: 'Dev', is_favorite: 1 },
+          { aws_account_id: '111111111111', role_name: 'ReadOnly', hidden: 0, aws_account_nickname: 'Dev', is_favorite: 1 },
+          { aws_account_id: '222222222222', role_name: 'Admin', hidden: 0, aws_account_nickname: null, is_favorite: 0 },
         ],
       } as unknown as D1Result);
       const dao = new AssumableRolesDAO(mockDb);
       const result = await dao.getAllRolesByUserEmail('user@test.com');
       expect(result['111111111111']).toEqual({
         roles: ['Admin', 'ReadOnly'],
+        hiddenRoles: [],
         nickname: 'Dev',
         favorite: true,
       });
       expect(result['222222222222']).toEqual({
         roles: ['Admin'],
+        hiddenRoles: [],
         nickname: undefined,
+        favorite: false,
+      });
+    });
+
+    it('splits rows into roles and hiddenRoles based on hidden flag when showHidden=true', async () => {
+      vi.mocked(mockStmt.all).mockResolvedValue({
+        results: [
+          { aws_account_id: '111111111111', role_name: 'Visible', hidden: 0, aws_account_nickname: 'Dev', is_favorite: 0 },
+          { aws_account_id: '111111111111', role_name: 'Hidden', hidden: 1, aws_account_nickname: 'Dev', is_favorite: 0 },
+        ],
+      } as unknown as D1Result);
+      const dao = new AssumableRolesDAO(mockDb);
+      const result = await dao.getAllRolesByUserEmail('user@test.com', true);
+      expect(result['111111111111']).toEqual({
+        roles: ['Visible'],
+        hiddenRoles: ['Hidden'],
+        nickname: 'Dev',
         favorite: false,
       });
     });
@@ -170,12 +189,30 @@ describe('AssumableRolesDAO', () => {
   describe('searchAccountsByQuery', () => {
     it('returns matching accounts', async () => {
       vi.mocked(mockStmt.all).mockResolvedValue({
-        results: [{ aws_account_id: '111111111111', role_name: 'Admin', aws_account_nickname: 'Dev', is_favorite: 0 }],
+        results: [{ aws_account_id: '111111111111', role_name: 'Admin', hidden: 0, aws_account_nickname: 'Dev', is_favorite: 0 }],
       } as unknown as D1Result);
       const dao = new AssumableRolesDAO(mockDb);
       const result = await dao.searchAccountsByQuery('user@test.com', 'Dev');
       expect(result['111111111111']).toEqual({
         roles: ['Admin'],
+        hiddenRoles: [],
+        nickname: 'Dev',
+        favorite: false,
+      });
+    });
+
+    it('splits rows into roles and hiddenRoles based on hidden flag when showHidden=true', async () => {
+      vi.mocked(mockStmt.all).mockResolvedValue({
+        results: [
+          { aws_account_id: '111111111111', role_name: 'Visible', hidden: 0, aws_account_nickname: 'Dev', is_favorite: 0 },
+          { aws_account_id: '111111111111', role_name: 'Hidden', hidden: 1, aws_account_nickname: 'Dev', is_favorite: 0 },
+        ],
+      } as unknown as D1Result);
+      const dao = new AssumableRolesDAO(mockDb);
+      const result = await dao.searchAccountsByQuery('user@test.com', 'Dev', true);
+      expect(result['111111111111']).toEqual({
+        roles: ['Visible'],
+        hiddenRoles: ['Hidden'],
         nickname: 'Dev',
         favorite: false,
       });

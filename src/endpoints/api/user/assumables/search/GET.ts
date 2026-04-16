@@ -49,6 +49,14 @@ class SearchAccountsRoute extends IActivityAPIRoute<SearchAccountsRequest, Searc
                       description: 'IAM Role name',
                     },
                   },
+                  hiddenRoles: {
+                    type: 'array' as const,
+                    description: 'Role names the user has hidden. Only populated when showHidden=true.',
+                    items: {
+                      type: 'string' as const,
+                      description: 'IAM Role name',
+                    },
+                  },
                   nickname: {
                     type: 'string' as const,
                     description: 'Optional AWS account nickname',

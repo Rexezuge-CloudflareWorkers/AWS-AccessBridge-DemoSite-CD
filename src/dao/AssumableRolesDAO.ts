@@ -82,13 +82,13 @@ class AssumableRolesDAO {
     const hiddenFilter: string = showHidden ? '' : 'AND (ar.hidden IS NULL OR ar.hidden = FALSE)';
     const results: D1Result<GetAllRolesByUserEmailInternal> = await this.database
       .prepare(
-        `SELECT ar.aws_account_id, ar.role_name, aa.aws_account_nickname, 
+        `SELECT ar.aws_account_id, ar.role_name, ar.hidden, aa.aws_account_nickname,
                 CASE WHEN ufa.aws_account_id IS NOT NULL THEN 1 ELSE 0 END as is_favorite
          FROM assumable_roles ar
          LEFT JOIN aws_accounts aa ON ar.aws_account_id = aa.aws_account_id
          LEFT JOIN user_favorite_accounts ufa ON ar.aws_account_id = ufa.aws_account_id AND ufa.user_email = ?
          WHERE ar.user_email = ? ${hiddenFilter}
-         ORDER BY is_favorite DESC, 
+         ORDER BY is_favorite DESC,
                   CASE WHEN aa.aws_account_nickname IS NOT NULL THEN 0 ELSE 1 END,
                   COALESCE(aa.aws_account_nickname, ar.aws_account_id)
          LIMIT ? OFFSET ?`,
@@ -101,11 +101,16 @@ class AssumableRolesDAO {
         if (!roleMap[row.aws_account_id]) {
           roleMap[row.aws_account_id] = {
             roles: [],
+            hiddenRoles: [],
             nickname: row.aws_account_nickname || undefined,
             favorite: row.is_favorite === 1,
           };
         }
-        roleMap[row.aws_account_id].roles.push(row.role_name);
+        if (row.hidden === 1) {
+          roleMap[row.aws_account_id].hiddenRoles!.push(row.role_name);
+        } else {
+          roleMap[row.aws_account_id].roles.push(row.role_name);
+        }
       }
       return roleMap;
     }
@@ -229,14 +234,14 @@ class AssumableRolesDAO {
     const hiddenFilter: string = showHidden ? '' : 'AND (ar.hidden IS NULL OR ar.hidden = FALSE)';
     const results: D1Result<GetAllRolesByUserEmailInternal> = await this.database
       .prepare(
-        `SELECT ar.aws_account_id, ar.role_name, aa.aws_account_nickname, 
+        `SELECT ar.aws_account_id, ar.role_name, ar.hidden, aa.aws_account_nickname,
                 CASE WHEN ufa.aws_account_id IS NOT NULL THEN 1 ELSE 0 END as is_favorite
          FROM assumable_roles ar
          LEFT JOIN aws_accounts aa ON ar.aws_account_id = aa.aws_account_id
          LEFT JOIN user_favorite_accounts ufa ON ar.aws_account_id = ufa.aws_account_id AND ufa.user_email = ?
          WHERE ar.user_email = ? ${hiddenFilter}
            AND (ar.aws_account_id LIKE ? OR aa.aws_account_nickname LIKE ?)
-         ORDER BY is_favorite DESC, 
+         ORDER BY is_favorite DESC,
                   CASE WHEN aa.aws_account_nickname IS NOT NULL THEN 0 ELSE 1 END,
                   COALESCE(aa.aws_account_nickname, ar.aws_account_id)`,
       )
@@ -248,11 +253,16 @@ class AssumableRolesDAO {
         if (!roleMap[row.aws_account_id]) {
           roleMap[row.aws_account_id] = {
             roles: [],
+            hiddenRoles: [],
             nickname: row.aws_account_nickname || undefined,
             favorite: row.is_favorite === 1,
           };
         }
-        roleMap[row.aws_account_id].roles.push(row.role_name);
+        if (row.hidden === 1) {
+          roleMap[row.aws_account_id].hiddenRoles!.push(row.role_name);
+        } else {
+          roleMap[row.aws_account_id].roles.push(row.role_name);
+        }
       }
       return roleMap;
     }
@@ -267,6 +277,7 @@ interface GetRolesByUserAndAccountInternal {
 interface GetAllRolesByUserEmailInternal {
   aws_account_id: string;
   role_name: string;
+  hidden: number | null;
   aws_account_nickname: string | null;
   is_favorite: number;
 }

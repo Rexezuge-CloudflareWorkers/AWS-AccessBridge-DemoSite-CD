@@ -1,5 +1,6 @@
 interface AssumableAccount {
   roles: string[];
+  hiddenRoles?: string[] | undefined;
   nickname?: string | undefined;
   favorite?: boolean | undefined;
 }

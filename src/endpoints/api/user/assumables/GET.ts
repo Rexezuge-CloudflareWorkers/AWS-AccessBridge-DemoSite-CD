@@ -70,6 +70,16 @@ class ListAssumablesRoute extends IActivityAPIRoute<ListAssumablesRequest, ListA
                       description: 'IAM Role name',
                     },
                   },
+                  hiddenRoles: {
+                    type: 'array' as const,
+                    description: 'Role names the user has hidden. Only populated when showHidden=true.',
+                    items: {
+                      type: 'string' as const,
+                      minLength: 1,
+                      maxLength: 64,
+                      description: 'IAM Role name',
+                    },
+                  },
                   nickname: {
                     type: 'string' as const,
                     description: 'Optional AWS account nickname',
@@ -103,8 +113,13 @@ class ListAssumablesRoute extends IActivityAPIRoute<ListAssumablesRequest, ListA
                 summary: 'User with hidden roles included (showHidden=true)',
                 value: {
                   totalAccounts: 2,
-                  '123456789012': { roles: ['ReadOnlyRole', 'DeveloperRole', 'HiddenRole'], nickname: 'Production', favorite: true },
-                  '987654321098': { roles: ['AdminRole', 'AnotherHiddenRole'], favorite: false },
+                  '123456789012': {
+                    roles: ['ReadOnlyRole', 'DeveloperRole'],
+                    hiddenRoles: ['HiddenRole'],
+                    nickname: 'Production',
+                    favorite: true,
+                  },
+                  '987654321098': { roles: ['AdminRole'], hiddenRoles: ['AnotherHiddenRole'], favorite: false },
                 },
               },
               'with-pagination': {
