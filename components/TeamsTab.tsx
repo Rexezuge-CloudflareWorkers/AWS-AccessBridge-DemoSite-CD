@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 interface Team {
-  id: string;
-  name: string;
+  teamId: string;
+  teamName: string;
   createdBy: string;
   createdAt: number;
 }
@@ -13,7 +13,7 @@ interface TeamMember {
   teamId: string;
   userEmail: string;
   role: string;
-  addedAt: number;
+  joinedAt: number;
 }
 
 interface TeamsTabProps {
@@ -211,8 +211,8 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
       setSelectedTeamId(teamId);
       setMembers([]);
       setAccounts([]);
-      const team = teams.find((t) => t.id === teamId);
-      setRenameTeamName(team?.name || '');
+      const team = teams.find((t) => t.teamId === teamId);
+      setRenameTeamName(team?.teamName || '');
       fetchMembers(teamId);
       fetchAccounts(teamId);
     },
@@ -325,7 +325,7 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
 
   const formatTimestamp = (ts: number): string => new Date(ts * 1000).toLocaleDateString();
 
-  const selectedTeam = teams.find((t) => t.id === selectedTeamId);
+  const selectedTeam = teams.find((t) => t.teamId === selectedTeamId);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -388,22 +388,22 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {teams.map((team) => (
               <div
-                key={team.id}
-                onClick={() => selectTeam(team.id)}
+                key={team.teamId}
+                onClick={() => selectTeam(team.teamId)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '12px 16px',
-                  background: selectedTeamId === team.id ? 'rgba(37,99,235,0.15)' : '#252d3d',
+                  background: selectedTeamId === team.teamId ? 'rgba(37,99,235,0.15)' : '#252d3d',
                   borderRadius: '8px',
                   cursor: 'pointer',
-                  border: selectedTeamId === team.id ? '1px solid rgba(37,99,235,0.4)' : '1px solid transparent',
+                  border: selectedTeamId === team.teamId ? '1px solid rgba(37,99,235,0.4)' : '1px solid transparent',
                   transition: 'all 0.15s',
                 }}
               >
                 <div>
-                  <div style={{ fontWeight: 500, color: '#ffffff' }}>{team.name}</div>
+                  <div style={{ fontWeight: 500, color: '#ffffff' }}>{team.teamName}</div>
                   <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
                     Created by {team.createdBy} on {formatTimestamp(team.createdAt)}
                   </div>
@@ -411,7 +411,7 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeleteTeam(team.id);
+                    handleDeleteTeam(team.teamId);
                   }}
                   style={{ ...styles.btnSmall, background: '#dc2626' }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = '#b91c1c')}
@@ -430,7 +430,7 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
         <>
           {/* Rename Team */}
           <div style={styles.card}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Team Settings — {selectedTeam.name}</h3>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '16px' }}>Team Settings — {selectedTeam.teamName}</h3>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -448,14 +448,14 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
               </div>
               <button
                 type="submit"
-                disabled={!renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name}
+                disabled={!renameTeamName.trim() || renameTeamName.trim() === selectedTeam.teamName}
                 style={{
                   ...styles.btnBlue,
-                  opacity: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name ? 0.5 : 1,
-                  cursor: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.name ? 'not-allowed' : 'pointer',
+                  opacity: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.teamName ? 0.5 : 1,
+                  cursor: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.teamName ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  if (renameTeamName.trim() && renameTeamName.trim() !== selectedTeam.name) e.currentTarget.style.background = '#1d4ed8';
+                  if (renameTeamName.trim() && renameTeamName.trim() !== selectedTeam.teamName) e.currentTarget.style.background = '#1d4ed8';
                 }}
                 onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
               >
@@ -564,7 +564,7 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
                             <option value="admin">admin</option>
                           </select>
                         </td>
-                        <td style={{ ...styles.td, color: '#6b7280', fontSize: '13px' }}>{formatTimestamp(m.addedAt)}</td>
+                        <td style={{ ...styles.td, color: '#6b7280', fontSize: '13px' }}>{formatTimestamp(m.joinedAt)}</td>
                         <td style={{ ...styles.td, textAlign: 'right' }}>
                           <button
                             onClick={() => handleRemoveMember(m.userEmail)}
