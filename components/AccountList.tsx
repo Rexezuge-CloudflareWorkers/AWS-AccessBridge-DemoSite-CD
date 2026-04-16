@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import AccessKeyModal from './AccessKeyModal';
 
 type RoleMap = Record<string, { roles: string[]; hiddenRoles?: string[]; nickname?: string; favorite: boolean }>;
@@ -475,81 +476,84 @@ export default function AccountList({ showHidden, searchTerm, pageSize, currentP
 
       {modalData && <AccessKeyModal {...modalData} onClose={() => setModalData(null)} />}
 
-      {confirmHide && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          role="dialog"
-          aria-label={confirmHide.roleHidden ? 'Confirm unhide role' : 'Confirm hide role'}
-          style={{
-            position: 'fixed',
-            top: confirmHide.top,
-            right: confirmHide.right,
-            background: '#111827',
-            border: '1px solid #374151',
-            borderRadius: '10px',
-            padding: '10px 12px',
-            boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.6)',
-            whiteSpace: 'nowrap',
-            zIndex: 50,
-          }}
-        >
+      {confirmHide &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label={confirmHide.roleHidden ? 'Confirm unhide role' : 'Confirm hide role'}
             style={{
-              position: 'absolute',
-              top: '-5px',
-              right: '10px',
-              width: '10px',
-              height: '10px',
+              position: 'fixed',
+              top: confirmHide.top,
+              right: confirmHide.right,
               background: '#111827',
-              borderLeft: '1px solid #374151',
-              borderTop: '1px solid #374151',
-              transform: 'rotate(45deg)',
+              border: '1px solid #374151',
+              borderRadius: '10px',
+              padding: '10px 12px',
+              boxShadow: '0 10px 20px -5px rgba(0, 0, 0, 0.6)',
+              whiteSpace: 'nowrap',
+              zIndex: 50,
             }}
-          />
-          <div style={{ fontSize: '12px', color: '#e5e7eb', marginBottom: '8px' }}>
-            {confirmHide.roleHidden ? 'Unhide this role?' : 'Hide this role?'}
-          </div>
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmHide(null);
-              }}
+          >
+            <div
               style={{
-                fontSize: '12px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                background: 'transparent',
-                color: '#9ca3af',
-                border: '1px solid #374151',
-                cursor: 'pointer',
+                position: 'absolute',
+                top: '-5px',
+                right: '10px',
+                width: '10px',
+                height: '10px',
+                background: '#111827',
+                borderLeft: '1px solid #374151',
+                borderTop: '1px solid #374151',
+                transform: 'rotate(45deg)',
               }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const { accountId, role, roleHidden } = confirmHide;
-                setConfirmHide(null);
-                toggleHidden(accountId, role, roleHidden);
-              }}
-              style={{
-                fontSize: '12px',
-                padding: '4px 10px',
-                borderRadius: '6px',
-                background: confirmHide.roleHidden ? '#2563eb' : '#dc2626',
-                color: '#ffffff',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: 500,
-              }}
-            >
-              {confirmHide.roleHidden ? 'Unhide' : 'Hide'}
-            </button>
-          </div>
-        </div>
-      )}
+            />
+            <div style={{ fontSize: '12px', color: '#e5e7eb', marginBottom: '8px' }}>
+              {confirmHide.roleHidden ? 'Unhide this role?' : 'Hide this role?'}
+            </div>
+            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmHide(null);
+                }}
+                style={{
+                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: 'transparent',
+                  color: '#9ca3af',
+                  border: '1px solid #374151',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const { accountId, role, roleHidden } = confirmHide;
+                  setConfirmHide(null);
+                  toggleHidden(accountId, role, roleHidden);
+                }}
+                style={{
+                  fontSize: '12px',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  background: confirmHide.roleHidden ? '#2563eb' : '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                }}
+              >
+                {confirmHide.roleHidden ? 'Unhide' : 'Hide'}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
