@@ -13,7 +13,20 @@ interface TrendMonth {
   byAccount: Record<string, number>;
 }
 
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 function formatMonthLabel(period: string): string {
   const monthNum = parseInt(period.substring(5, 7), 10);

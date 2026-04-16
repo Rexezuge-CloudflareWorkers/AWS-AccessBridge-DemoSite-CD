@@ -468,7 +468,8 @@ export default function TeamsTab({ showMessage }: TeamsTabProps) {
                   cursor: !renameTeamName.trim() || renameTeamName.trim() === selectedTeam.teamName ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  if (renameTeamName.trim() && renameTeamName.trim() !== selectedTeam.teamName) e.currentTarget.style.background = '#1d4ed8';
+                  if (renameTeamName.trim() && renameTeamName.trim() !== selectedTeam.teamName)
+                    e.currentTarget.style.background = '#1d4ed8';
                 }}
                 onMouseLeave={(e) => (e.currentTarget.style.background = '#2563eb')}
               >
