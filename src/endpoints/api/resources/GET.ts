@@ -7,15 +7,136 @@ class ListResourcesRoute extends IActivityAPIRoute<ListResourcesRequest, ListRes
   schema = {
     tags: ['Resources'],
     summary: 'List Resources',
-    description: 'Paginated resource list with filters. Only shows resources in accounts the user has access to.',
+    description:
+      'Returns a paginated list of AWS resources (EC2 instances, S3 buckets, Lambda functions, RDS instances) with optional filters by type, account, and search term. Only shows resources in accounts the user has access to. Data is collected by the background ResourceInventoryCollectionTask.',
     parameters: [
-      { name: 'type', in: 'query' as const, required: false, schema: { type: 'string' as const } },
-      { name: 'accountId', in: 'query' as const, required: false, schema: { type: 'string' as const } },
-      { name: 'search', in: 'query' as const, required: false, schema: { type: 'string' as const } },
-      { name: 'limit', in: 'query' as const, required: false, schema: { type: 'integer' as const, default: 50 } },
-      { name: 'offset', in: 'query' as const, required: false, schema: { type: 'integer' as const, default: 0 } },
+      {
+        name: 'type',
+        in: 'query' as const,
+        required: false,
+        description: 'Filter by resource type (e.g., ec2, s3, lambda, rds)',
+        schema: { type: 'string' as const, enum: ['ec2', 's3', 'lambda', 'rds'], example: 'ec2' },
+      },
+      {
+        name: 'accountId',
+        in: 'query' as const,
+        required: false,
+        description: 'Filter by AWS Account ID (must be an account the user has access to)',
+        schema: { type: 'string' as const, pattern: '^\\d{12}$', example: '123456789012' },
+      },
+      {
+        name: 'search',
+        in: 'query' as const,
+        required: false,
+        description: 'Free-text search across resource names, IDs, and metadata',
+        schema: { type: 'string' as const, example: 'web-server' },
+      },
+      {
+        name: 'limit',
+        in: 'query' as const,
+        required: false,
+        description: 'Maximum number of resources to return per page (max 200)',
+        schema: { type: 'integer' as const, minimum: 1, maximum: 200, default: 50 },
+      },
+      {
+        name: 'offset',
+        in: 'query' as const,
+        required: false,
+        description: 'Number of resources to skip for pagination',
+        schema: { type: 'integer' as const, minimum: 0, default: 0 },
+      },
     ],
-    responses: { '200': { description: 'Resource list' } },
+    responses: {
+      '200': {
+        description: 'Paginated list of resources matching the filters',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                items: {
+                  type: 'array' as const,
+                  items: {
+                    type: 'object' as const,
+                    properties: {
+                      resourceId: { type: 'string' as const, description: 'AWS resource identifier' },
+                      resourceType: { type: 'string' as const, description: 'Resource type (ec2, s3, lambda, rds)' },
+                      resourceName: { type: 'string' as const, description: 'Resource name or identifier' },
+                      awsAccountId: { type: 'string' as const, description: 'AWS Account ID the resource belongs to' },
+                      region: { type: 'string' as const, description: 'AWS region where the resource is located' },
+                      metadata: { type: 'object' as const, description: 'Additional resource-specific metadata' },
+                      collectedAt: { type: 'integer' as const, description: 'Unix timestamp of when the resource was last collected' },
+                    },
+                  },
+                },
+                total: { type: 'integer' as const, description: 'Total number of resources matching the filters' },
+              },
+            },
+            examples: {
+              'ec2-instances': {
+                summary: 'EC2 instances filtered by type',
+                value: {
+                  items: [
+                    {
+                      resourceId: 'i-0abc123def456789',
+                      resourceType: 'ec2',
+                      resourceName: 'web-server-01',
+                      awsAccountId: '123456789012',
+                      region: 'us-east-1',
+                      metadata: { instanceType: 't3.medium', state: 'running' },
+                      collectedAt: 1704067200,
+                    },
+                  ],
+                  total: 12,
+                },
+              },
+              'empty-results': {
+                summary: 'No resources match the filters',
+                value: { items: [], total: 0 },
+              },
+            },
+          },
+        },
+      },
+      '401': {
+        description: 'Unauthorized - Missing or invalid authentication',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'UnauthorizedError' },
+                    Message: { type: 'string' as const, example: 'No authenticated user email provided in request headers.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '500': {
+        description: 'Internal server error while listing resources',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'InternalServerError' },
+                    Message: { type: 'string' as const, example: 'Failed to list resources.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     security: [{ CloudflareAccess: [] }],
   };
 

@@ -24,7 +24,17 @@ class TestCredentialChainRoute extends IAdminActivityAPIRoute<
             type: 'object' as const,
             required: ['principalArn'],
             properties: {
-              principalArn: { type: 'string' as const, description: 'The target principal ARN to test the chain for' },
+              principalArn: {
+                type: 'string' as const,
+                description: 'The target principal ARN to test the chain for',
+                example: 'arn:aws:iam::123456789012:role/DeveloperRole',
+              },
+            },
+          },
+          examples: {
+            'test-chain': {
+              summary: 'Test credential chain for a role',
+              value: { principalArn: 'arn:aws:iam::123456789012:role/DeveloperRole' },
             },
           },
         },
@@ -47,6 +57,105 @@ class TestCredentialChainRoute extends IAdminActivityAPIRoute<
                       arn: { type: 'string' as const },
                       status: { type: 'string' as const },
                     },
+                  },
+                },
+              },
+            },
+            examples: {
+              'successful-chain': {
+                summary: 'All chain hops succeeded',
+                value: {
+                  success: true,
+                  chain: [
+                    { arn: 'arn:aws:iam::123456789012:user/deploy-bot', status: 'ok (base credentials)' },
+                    { arn: 'arn:aws:iam::123456789012:role/IntermediateRole', status: 'ok' },
+                    { arn: 'arn:aws:iam::987654321098:role/DeveloperRole', status: 'ok' },
+                  ],
+                },
+              },
+              'failed-chain': {
+                summary: 'Chain failed at an intermediate hop',
+                value: {
+                  success: false,
+                  chain: [
+                    { arn: 'arn:aws:iam::123456789012:user/deploy-bot', status: 'ok (base credentials)' },
+                    { arn: 'arn:aws:iam::123456789012:role/IntermediateRole', status: 'failed: Access denied' },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      },
+      '400': {
+        description: 'Bad request - Missing required field',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'BadRequestError' },
+                    Message: { type: 'string' as const, example: 'Missing required field: principalArn.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '401': {
+        description: 'Unauthorized - Missing or invalid authentication',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'UnauthorizedError' },
+                    Message: { type: 'string' as const, example: 'No authenticated user email provided in request headers.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '403': {
+        description: 'Forbidden - User is not a superadmin',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'UnauthorizedError' },
+                    Message: { type: 'string' as const, example: 'User is not a super admin.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '500': {
+        description: 'Internal server error during chain test',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'InternalServerError' },
+                    Message: { type: 'string' as const, example: 'Failed to test credential chain.' },
                   },
                 },
               },

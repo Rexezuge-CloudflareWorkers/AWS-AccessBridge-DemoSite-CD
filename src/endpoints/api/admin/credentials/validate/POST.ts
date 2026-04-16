@@ -23,7 +23,24 @@ class ValidateCredentialsRoute extends IAdminActivityAPIRoute<
             properties: {
               accessKeyId: { type: 'string' as const, description: 'AWS Access Key ID' },
               secretAccessKey: { type: 'string' as const, description: 'AWS Secret Access Key' },
-              sessionToken: { type: 'string' as const, description: 'AWS Session Token (optional)' },
+              sessionToken: { type: 'string' as const, description: 'AWS Session Token (optional, required for temporary credentials)' },
+            },
+          },
+          examples: {
+            'iam-user': {
+              summary: 'Validate IAM user credentials',
+              value: {
+                accessKeyId: 'AKIAIOSFODNN7EXAMPLE',
+                secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+              },
+            },
+            'temporary-credentials': {
+              summary: 'Validate temporary credentials with session token',
+              value: {
+                accessKeyId: 'ASIAIOSFODNN7EXAMPLE',
+                secretAccessKey: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
+                sessionToken: 'AQoEXAMPLEH4aoAH0gNCAPyJxz4BlCFFxWNE1OPTgk5TthT+FvwqnKwRcOIfrRh3c/LTo6UDdyJwOOvEVPvLXCrrrUtdnniCEXAMPLE',
+              },
             },
           },
         },
@@ -31,16 +48,112 @@ class ValidateCredentialsRoute extends IAdminActivityAPIRoute<
     },
     responses: {
       '200': {
-        description: 'Credentials are valid',
+        description: 'Credentials are valid - returns STS identity information',
         content: {
           'application/json': {
             schema: {
               type: 'object' as const,
               properties: {
-                valid: { type: 'boolean' as const },
-                arn: { type: 'string' as const },
-                accountId: { type: 'string' as const },
-                userId: { type: 'string' as const },
+                valid: { type: 'boolean' as const, description: 'Whether the credentials are valid' },
+                arn: { type: 'string' as const, description: 'ARN of the IAM entity the credentials belong to' },
+                accountId: { type: 'string' as const, description: 'AWS Account ID the credentials belong to' },
+                userId: { type: 'string' as const, description: 'Unique identifier of the IAM entity' },
+              },
+            },
+            examples: {
+              'valid-iam-user': {
+                summary: 'Valid IAM user credentials',
+                value: {
+                  valid: true,
+                  arn: 'arn:aws:iam::123456789012:user/deploy-bot',
+                  accountId: '123456789012',
+                  userId: 'AIDAIOSFODNN7EXAMPLE',
+                },
+              },
+              'valid-assumed-role': {
+                summary: 'Valid assumed role credentials',
+                value: {
+                  valid: true,
+                  arn: 'arn:aws:sts::123456789012:assumed-role/AdminRole/session-name',
+                  accountId: '123456789012',
+                  userId: 'AROAIOSFODNN7EXAMPLE:session-name',
+                },
+              },
+            },
+          },
+        },
+      },
+      '400': {
+        description: 'Bad request - Missing fields or invalid AWS credentials',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'BadRequestError' },
+                    Message: { type: 'string' as const, example: 'AWS credentials are invalid: 403 Forbidden' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '401': {
+        description: 'Unauthorized - Missing or invalid authentication',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'UnauthorizedError' },
+                    Message: { type: 'string' as const, example: 'No authenticated user email provided in request headers.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '403': {
+        description: 'Forbidden - User is not a superadmin',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'UnauthorizedError' },
+                    Message: { type: 'string' as const, example: 'User is not a super admin.' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      '500': {
+        description: 'Internal server error - Failed to parse STS response',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object' as const,
+              properties: {
+                Exception: {
+                  type: 'object' as const,
+                  properties: {
+                    Type: { type: 'string' as const, example: 'InternalServerError' },
+                    Message: { type: 'string' as const, example: 'Failed to parse STS GetCallerIdentity response.' },
+                  },
+                },
               },
             },
           },
