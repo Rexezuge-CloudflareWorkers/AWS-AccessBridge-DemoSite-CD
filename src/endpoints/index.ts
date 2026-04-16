@@ -47,7 +47,7 @@ import { UpdateTeamMemberRoleRoute as OriginalUpdateTeamMemberRoleRoute } from '
 import { AddTeamAccountRoute as OriginalAddTeamAccountRoute } from './api/admin/team/account/POST';
 import { RemoveTeamAccountRoute as OriginalRemoveTeamAccountRoute } from './api/admin/team/account/DELETE';
 import { ListTeamAccountsRoute as OriginalListTeamAccountsRoute } from './api/admin/team/accounts/GET';
-import { CleanupOrphanedDataRoute as OriginalCleanupOrphanedDataRoute } from './api/admin/cleanup/orphaned/POST';
+import { CleanupOrphanedDataRoute as OriginalCleanupOrphanedDataRoute } from './api/admin/maintenance/cleanup-orphaned/POST';
 
 export const GenerateConsoleUrlRoute: any = OriginalGenerateConsoleUrlRoute;
 export const AssumeRoleRoute: any = OriginalAssumeRoleRoute;

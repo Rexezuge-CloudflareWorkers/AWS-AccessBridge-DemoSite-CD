@@ -143,7 +143,7 @@ export default function AdminPage({ activeTab: activeTabProp, onTabChange }: Adm
     { id: 'spendalerts', label: 'Spend Alerts' },
     { id: 'datacollection', label: 'Data Collection' },
     { id: 'auditlogs', label: 'Audit Logs' },
-    { id: 'cleanup', label: 'Cleanup' },
+    { id: 'maintenance', label: 'Maintenance' },
   ];
 
   return (
@@ -209,7 +209,7 @@ export default function AdminPage({ activeTab: activeTabProp, onTabChange }: Adm
         {activeTab === 'spendalerts' && <SpendAlertsTab showMessage={showMessage} />}
         {activeTab === 'datacollection' && <DataCollectionTab showMessage={showMessage} />}
         {activeTab === 'auditlogs' && <AuditLogsTab showMessage={showMessage} />}
-        {activeTab === 'cleanup' && <CleanupTab showMessage={showMessage} />}
+        {activeTab === 'maintenance' && <MaintenanceTab showMessage={showMessage} />}
       </div>
     </div>
   );
@@ -1117,7 +1117,7 @@ const CLEANUP_ROW_LABELS: Array<{ key: keyof CleanupResult['deletedCounts']; lab
   { key: 'dataCollectionConfig', label: 'data_collection_config' },
 ];
 
-function CleanupTab({ showMessage }: { showMessage: (type: 'success' | 'error', text: string) => void }) {
+function MaintenanceTab({ showMessage }: { showMessage: (type: 'success' | 'error', text: string) => void }) {
   const [confirmed, setConfirmed] = useState(false);
   const [lastResult, setLastResult] = useState<CleanupResult | null>(null);
 
@@ -1125,7 +1125,7 @@ function CleanupTab({ showMessage }: { showMessage: (type: 'success' | 'error', 
     if (!confirmed) return;
 
     try {
-      const response = await fetch('/api/admin/cleanup/orphaned', {
+      const response = await fetch('/api/admin/maintenance/cleanup-orphaned', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

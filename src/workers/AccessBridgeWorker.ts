@@ -136,7 +136,7 @@ class AccessBridgeWorker extends AbstractWorker {
     openapi.get('/api/admin/team/accounts', ListTeamAccountsRoute);
 
     // Maintenance Routes
-    openapi.post('/api/admin/cleanup/orphaned', CleanupOrphanedDataRoute);
+    openapi.post('/api/admin/maintenance/cleanup-orphaned', CleanupOrphanedDataRoute);
 
     // SPA catch-all: serve embedded index.html for frontend routes
     app.get('*', (c) => {

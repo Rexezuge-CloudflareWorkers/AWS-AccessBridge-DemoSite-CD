@@ -25,5 +25,5 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   'PUT:/api/admin/role/config': 'SET_ROLE_CONFIG',
   'DELETE:/api/admin/role/config': 'DELETE_ROLE_CONFIG',
   'GET:/api/admin/audit-logs': 'QUERY_AUDIT_LOGS',
-  'POST:/api/admin/cleanup/orphaned': 'CLEANUP_ORPHANED_DATA',
+  'POST:/api/admin/maintenance/cleanup-orphaned': 'MAINTENANCE_CLEANUP_ORPHANED_DATA',
 };
