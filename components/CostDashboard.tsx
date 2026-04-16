@@ -43,15 +43,18 @@ export default function CostDashboard() {
 
   if (isLoading) {
     return (
-      <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-400 border-t-transparent mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading cost data...</p>
+      <div style={{ textAlign: 'center', padding: '48px 0' }}>
+        <div
+          className="animate-spin"
+          style={{ width: '40px', height: '40px', borderRadius: '50%', border: '2px solid #60a5fa', borderTopColor: 'transparent', margin: '0 auto 16px' }}
+        ></div>
+        <p style={{ color: '#9ca3af' }}>Loading cost data...</p>
       </div>
     );
   }
 
   if (error) {
-    return <div className="bg-red-800 border border-red-600 text-red-200 px-4 py-3 rounded">{error}</div>;
+    return <div style={{ background: 'rgba(127, 29, 29, 0.3)', color: '#fca5a5', padding: '12px 16px', borderRadius: '12px' }}>{error}</div>;
   }
 
   const maxTrend: number = trends.length > 0 ? Math.max(...trends.map((t) => t.total), 1) : 1;
