@@ -25,6 +25,13 @@ class SpendAlertDAO {
     await this.database.prepare('DELETE FROM spend_alerts WHERE alert_id = ?').bind(alertId).run();
   }
 
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM spend_alerts WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
+
   public async getAlertsByAccount(awsAccountId: string): Promise<SpendAlert[]> {
     const results = await this.database
       .prepare('SELECT * FROM spend_alerts WHERE aws_account_id = ? AND enabled = 1')

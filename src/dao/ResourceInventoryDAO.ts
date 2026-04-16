@@ -32,6 +32,13 @@ class ResourceInventoryDAO {
       .run();
   }
 
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM resource_inventory WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
+
   public async searchResources(
     accountIds: string[],
     query?: string,

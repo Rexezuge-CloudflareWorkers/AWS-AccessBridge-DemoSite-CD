@@ -31,6 +31,13 @@ class TeamAccountsDAO {
       .first();
     return !!result;
   }
+
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM team_accounts WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
 }
 
 export { TeamAccountsDAO };

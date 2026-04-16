@@ -100,4 +100,20 @@ describe('RoleConfigsDAO', () => {
       await expect(dao.deleteRoleConfig('123456789012', 'Admin')).rejects.toThrow(DatabaseError);
     });
   });
+
+  describe('deleteOrphaned', () => {
+    it('deletes role configs whose account has no assumable_roles and returns change count', async () => {
+      vi.mocked(mockStmt.run).mockResolvedValue({ success: true, meta: { changes: 2 } } as unknown as D1Result);
+      const dao = new RoleConfigsDAO(mockDb);
+      const count = await dao.deleteOrphaned();
+      expect(count).toBe(2);
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM role_configs.*NOT IN.*assumable_roles/s));
+    });
+
+    it('returns 0 when meta is missing', async () => {
+      const dao = new RoleConfigsDAO(mockDb);
+      const count = await dao.deleteOrphaned();
+      expect(count).toBe(0);
+    });
+  });
 });

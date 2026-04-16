@@ -50,6 +50,13 @@ class RoleConfigsDAO {
       throw new DatabaseError(`Failed to delete role config: ${result.error}`);
     }
   }
+
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM role_configs WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
 }
 
 export { RoleConfigsDAO };

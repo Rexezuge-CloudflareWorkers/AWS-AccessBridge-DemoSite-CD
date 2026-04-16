@@ -67,4 +67,21 @@ describe('AwsAccountsDAO', () => {
       await expect(dao.removeAccountNickname('123456789012')).rejects.toThrow(DatabaseError);
     });
   });
+
+  describe('deleteOrphaned', () => {
+    it('deletes accounts not referenced by any assumable_roles and returns change count', async () => {
+      vi.mocked(mockStmt.run).mockResolvedValue({ success: true, meta: { changes: 3 } } as unknown as D1Result);
+      const dao = new AwsAccountsDAO(mockDb);
+      const count = await dao.deleteOrphaned();
+      expect(count).toBe(3);
+      expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringMatching(/DELETE FROM aws_accounts.*NOT IN.*assumable_roles/s));
+    });
+
+    it('returns 0 when meta is missing', async () => {
+      vi.mocked(mockStmt.run).mockResolvedValue({ success: true } as unknown as D1Result);
+      const dao = new AwsAccountsDAO(mockDb);
+      const count = await dao.deleteOrphaned();
+      expect(count).toBe(0);
+    });
+  });
 });

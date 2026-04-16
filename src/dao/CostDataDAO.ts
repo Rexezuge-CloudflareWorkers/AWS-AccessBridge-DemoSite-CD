@@ -47,6 +47,13 @@ class CostDataDAO {
     return (results.results || []).map(this.mapToExternal);
   }
 
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM cost_data WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
+
   public async getLatestCostSummary(accountIds: string[]): Promise<CostData[]> {
     if (accountIds.length === 0) return [];
     const placeholders: string = accountIds.map(() => '?').join(',');

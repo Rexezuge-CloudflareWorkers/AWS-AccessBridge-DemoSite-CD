@@ -50,7 +50,13 @@ import {
   RemoveTeamAccountRoute,
   ListTeamAccountsRoute,
 } from '@/endpoints';
-import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask, ResourceInventoryCollectionTask } from '@/scheduled';
+import {
+  CredentialCacheRefreshTask,
+  AuditLogCleanupTask,
+  CostDataCollectionTask,
+  ResourceInventoryCollectionTask,
+  OrphanedDataCleanupTask,
+} from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
 import { SPA_HTML } from '@/generated/spa-shell';
 
@@ -155,6 +161,7 @@ class AccessBridgeWorker extends AbstractWorker {
     await new AuditLogCleanupTask().handle(event, env, ctx);
     await new CostDataCollectionTask().handle(event, env, ctx);
     await new ResourceInventoryCollectionTask().handle(event, env, ctx);
+    await new OrphanedDataCleanupTask().handle(event, env, ctx);
   }
 }
 

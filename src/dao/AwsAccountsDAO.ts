@@ -36,6 +36,13 @@ class AwsAccountsDAO {
       throw new DatabaseError(`Failed to remove account nickname: ${result.error}`);
     }
   }
+
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM aws_accounts WHERE aws_account_id NOT IN (SELECT DISTINCT aws_account_id FROM assumable_roles)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
 }
 
 export { AwsAccountsDAO };

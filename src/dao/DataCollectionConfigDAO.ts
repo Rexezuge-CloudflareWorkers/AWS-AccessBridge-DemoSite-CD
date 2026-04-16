@@ -23,6 +23,13 @@ class DataCollectionConfigDAO {
       .run();
   }
 
+  public async deleteOrphaned(): Promise<number> {
+    const result: D1Result = await this.database
+      .prepare('DELETE FROM data_collection_config WHERE principal_arn NOT IN (SELECT principal_arn FROM credentials)')
+      .run();
+    return result.meta?.changes ?? 0;
+  }
+
   public async getPrincipalArnsNeedingCollection(collectionType: string, limit: number, olderThan: number): Promise<string[]> {
     const results = await this.database
       .prepare(
