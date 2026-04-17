@@ -52,6 +52,7 @@ AWS AccessBridge is a single Cloudflare Worker that gives your team a web UI for
 - **Account nicknames** — give AWS account IDs human-friendly names.
 - **Role configs** — per-role default Console deep-link path and region.
 - **Audit log viewer** — filterable, paginated view of every API action taken through AccessBridge, with configurable retention.
+- **Maintenance** — one-click purge of orphaned rows in satellite tables (cost data, spend alerts, resource inventory, role configs, team memberships) left behind when an account or credential is removed.
 
 ### Security
 
@@ -386,14 +387,14 @@ npx wrangler dev     # Local Cloudflare Workers runtime for the backend
 
 Useful scripts:
 
-| Command            | What it does                                      |
-| ------------------ | ------------------------------------------------- |
-| `npm run build`    | Format, lint, build the SPA, and dry-run wrangler |
-| `npm run deploy`   | Build + `wrangler deploy`                         |
-| `npm run test`     | Run the vitest test suite                         |
-| `npm run tsc`      | Type-check frontend and backend tsconfigs         |
-| `npm run lint`     | ESLint autofix                                    |
-| `npm run prettier` | Prettier format                                   |
+| Command            | What it does                                            |
+| ------------------ | ------------------------------------------------------- |
+| `npm run build`    | Format, lint, and build the SPA with Vite               |
+| `npm run deploy`   | Build + `wrangler deploy --dry-run` + `wrangler deploy` |
+| `npm run test`     | Run the vitest test suite                               |
+| `npm run tsc`      | Type-check frontend and backend tsconfigs               |
+| `npm run lint`     | ESLint autofix                                          |
+| `npm run prettier` | Prettier format                                         |
 
 ---
 
@@ -407,7 +408,7 @@ Useful scripts:
 ## Contributing
 
 1. Fork the repository and create a feature branch.
-2. Make changes, add tests, and run `npm run build` (runs prettier + lint + dry deploy).
+2. Make changes, add tests, and run `npm run build` (runs prettier + lint + Vite build). Use `npm run deploy` to also dry-run wrangler before shipping.
 3. Open a pull request.
 
 ## License
