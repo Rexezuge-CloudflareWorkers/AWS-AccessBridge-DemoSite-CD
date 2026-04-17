@@ -133,17 +133,37 @@ export default function AdminPage({ activeTab: activeTabProp, onTabChange }: Adm
     setTimeout(() => setMessage(null), 5000);
   }, []);
 
-  const tabs = [
-    { id: 'wizard', label: 'Setup Wizard' },
-    { id: 'credentials', label: 'Credentials' },
-    { id: 'access', label: 'User Access' },
-    { id: 'accounts', label: 'Account Nicknames' },
-    { id: 'roleconfig', label: 'Role Config' },
-    { id: 'teams', label: 'Teams' },
-    { id: 'spendalerts', label: 'Spend Alerts' },
-    { id: 'datacollection', label: 'Data Collection' },
-    { id: 'auditlogs', label: 'Audit Logs' },
-    { id: 'maintenance', label: 'Maintenance' },
+  const tabGroups = [
+    { header: 'SETUP', tabs: [{ id: 'wizard', label: 'Setup Wizard' }] },
+    {
+      header: 'CONFIGURATION',
+      tabs: [
+        { id: 'credentials', label: 'Credentials' },
+        { id: 'accounts', label: 'Account Nicknames' },
+        { id: 'roleconfig', label: 'Role Config' },
+      ],
+    },
+    {
+      header: 'ACCESS',
+      tabs: [
+        { id: 'access', label: 'User Access' },
+        { id: 'teams', label: 'Teams' },
+      ],
+    },
+    {
+      header: 'MONITORING',
+      tabs: [
+        { id: 'spendalerts', label: 'Spend Alerts' },
+        { id: 'datacollection', label: 'Data Collection' },
+      ],
+    },
+    {
+      header: 'SYSTEM',
+      tabs: [
+        { id: 'auditlogs', label: 'Audit Logs' },
+        { id: 'maintenance', label: 'Maintenance' },
+      ],
+    },
   ];
 
   return (
@@ -180,50 +200,68 @@ export default function AdminPage({ activeTab: activeTabProp, onTabChange }: Adm
           document.body,
         )}
 
-      <div style={{ marginBottom: '32px' }}>
-        <div
+      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start' }}>
+        <aside
           style={{
-            display: 'flex',
-            gap: '4px',
+            width: '220px',
+            flexShrink: 0,
             background: '#1e2433',
-            padding: '6px',
             borderRadius: '12px',
-            overflowX: 'auto',
+            padding: '8px',
+            position: 'sticky',
+            top: '24px',
           }}
         >
-          {tabs.map((tab) => (
-            <TabButton key={tab.id} active={activeTab === tab.id} onClick={() => onTabChange?.(tab.id)}>
-              {tab.label}
-            </TabButton>
+          {tabGroups.map((group, idx) => (
+            <div key={group.header} style={{ marginTop: idx === 0 ? 0 : '12px' }}>
+              <div
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  color: '#6b7280',
+                  padding: '8px 12px 4px',
+                }}
+              >
+                {group.header}
+              </div>
+              {group.tabs.map((tab) => (
+                <SidebarTab key={tab.id} active={activeTab === tab.id} onClick={() => onTabChange?.(tab.id)}>
+                  {tab.label}
+                </SidebarTab>
+              ))}
+            </div>
           ))}
-        </div>
-      </div>
+        </aside>
 
-      <div className="animate-fade-in-up">
-        {activeTab === 'wizard' && <OnboardingWizard showMessage={showMessage} />}
-        {activeTab === 'credentials' && <CredentialsTab showMessage={showMessage} />}
-        {activeTab === 'access' && <AccessTab showMessage={showMessage} />}
-        {activeTab === 'accounts' && <AccountsTab showMessage={showMessage} />}
-        {activeTab === 'roleconfig' && <RoleConfigTab showMessage={showMessage} />}
-        {activeTab === 'teams' && <TeamsTab showMessage={showMessage} />}
-        {activeTab === 'spendalerts' && <SpendAlertsTab showMessage={showMessage} />}
-        {activeTab === 'datacollection' && <DataCollectionTab showMessage={showMessage} />}
-        {activeTab === 'auditlogs' && <AuditLogsTab showMessage={showMessage} />}
-        {activeTab === 'maintenance' && <MaintenanceTab showMessage={showMessage} />}
+        <div className="animate-fade-in-up" style={{ flex: 1, minWidth: 0 }}>
+          {activeTab === 'wizard' && <OnboardingWizard showMessage={showMessage} />}
+          {activeTab === 'credentials' && <CredentialsTab showMessage={showMessage} />}
+          {activeTab === 'access' && <AccessTab showMessage={showMessage} />}
+          {activeTab === 'accounts' && <AccountsTab showMessage={showMessage} />}
+          {activeTab === 'roleconfig' && <RoleConfigTab showMessage={showMessage} />}
+          {activeTab === 'teams' && <TeamsTab showMessage={showMessage} />}
+          {activeTab === 'spendalerts' && <SpendAlertsTab showMessage={showMessage} />}
+          {activeTab === 'datacollection' && <DataCollectionTab showMessage={showMessage} />}
+          {activeTab === 'auditlogs' && <AuditLogsTab showMessage={showMessage} />}
+          {activeTab === 'maintenance' && <MaintenanceTab showMessage={showMessage} />}
+        </div>
       </div>
     </div>
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+function SidebarTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   const [hovered, setHovered] = useState(false);
 
   const style: React.CSSProperties = {
-    padding: '8px 16px',
-    borderRadius: '8px',
+    display: 'block',
+    width: '100%',
+    textAlign: 'left',
+    padding: '8px 12px',
+    borderRadius: '6px',
     fontSize: '14px',
     fontWeight: 500,
-    whiteSpace: 'nowrap',
     border: 'none',
     cursor: 'pointer',
     transition: 'all 0.15s',
