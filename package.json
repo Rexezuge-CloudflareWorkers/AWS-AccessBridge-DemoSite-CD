@@ -22,7 +22,7 @@
     "chanfana": "^3.3.x",
     "hono": "^4.12.x",
     "jose": "^6.2.x",
-    "next": "^15.3.x",
+    "next": "^16.2.x",
     "react": "^19.2.x",
     "react-dom": "^19.2.x"
   },
