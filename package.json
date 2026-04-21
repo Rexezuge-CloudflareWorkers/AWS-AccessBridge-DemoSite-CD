@@ -27,12 +27,12 @@
     "react-dom": "^19.2.x"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260414.1",
-    "@tailwindcss/postcss": "^4.1.x",
-    "@tailwindcss/vite": "^4.1.x",
+    "@cloudflare/workers-types": "^4.20260421.1",
+    "@tailwindcss/postcss": "^4.2.x",
+    "@tailwindcss/vite": "^4.2.x",
     "@vitejs/plugin-react": "^6.0.x",
-    "terser": "^5.44.x",
-    "vite": "^6.3.x",
+    "terser": "^5.46.x",
+    "vite": "^8.0.x",
     "@types/node": "^25.6.x",
     "@types/react": "^19.2.x",
     "@types/react-dom": "^19.2.x",
@@ -42,10 +42,10 @@
     "globals": "^17.5.x",
     "jsonc-parser": "^3.3.x",
     "prettier": "^3.8.x",
-    "tailwindcss": "^4.1.x",
+    "tailwindcss": "^4.2.x",
     "typescript": "^6.0.x",
-    "typescript-eslint": "^8.58.x",
-    "vitest": "^4.1.4",
-    "wrangler": "^4.82.x"
+    "typescript-eslint": "^8.59.x",
+    "vitest": "^4.1.x",
+    "wrangler": "^4.84.x"
   }
 }
