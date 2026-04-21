@@ -30,7 +30,7 @@
     "@cloudflare/workers-types": "^4.20260414.1",
     "@tailwindcss/postcss": "^4.1.x",
     "@tailwindcss/vite": "^4.1.x",
-    "@vitejs/plugin-react": "^5.1.x",
+    "@vitejs/plugin-react": "^6.0.x",
     "terser": "^5.44.x",
     "vite": "^6.3.x",
     "@types/node": "^25.6.x",
