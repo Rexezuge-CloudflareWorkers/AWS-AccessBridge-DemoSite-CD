@@ -119,11 +119,7 @@ describe('MiddlewareHandlers', () => {
         );
       });
 
-      const response: Response = await app.fetch(
-        new Request('https://worker.example.com/api/test'),
-        createEnv(),
-        createExecutionContext(),
-      );
+      const response: Response = await app.fetch(new Request('https://worker.example.com/api/test'), createEnv(), createExecutionContext());
 
       expect(response.status).toBe(401);
       expect(auditLogCreateSpy).toHaveBeenCalledWith(
@@ -145,7 +141,11 @@ describe('MiddlewareHandlers', () => {
     it('uses the demo user when demo mode is enabled', async () => {
       const app: TestApp = createApp();
 
-      const response: Response = await app.fetch(new Request('https://worker.example.com/api/test'), createEnv({ DEMO_MODE: 'true' }), createExecutionContext());
+      const response: Response = await app.fetch(
+        new Request('https://worker.example.com/api/test'),
+        createEnv({ DEMO_MODE: 'true' }),
+        createExecutionContext(),
+      );
 
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toEqual({ email: DEMO_USER_EMAIL });
