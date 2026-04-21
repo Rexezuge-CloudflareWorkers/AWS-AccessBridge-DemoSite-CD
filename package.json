@@ -27,7 +27,6 @@
     "react-dom": "^19.2.x"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260421.1",
     "@tailwindcss/postcss": "^4.2.x",
     "@tailwindcss/vite": "^4.2.x",
     "@vitejs/plugin-react": "^6.0.x",
