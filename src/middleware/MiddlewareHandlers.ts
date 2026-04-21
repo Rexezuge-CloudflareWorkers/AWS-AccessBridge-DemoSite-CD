@@ -1,8 +1,20 @@
-import { INTERNAL_HEADER_PREFIX, SELF_WORKER_BASE_HOSTNAME } from '@/constants';
+import { AUDIT_ACTIONS } from '@/constants/AuditActions';
+import { DEMO_USER_EMAIL, DEFAULT_DEMO_MODE, INTERNAL_HEADER_PREFIX, SELF_WORKER_BASE_HOSTNAME } from '@/constants';
+import { AuditLogDAO } from '@/dao/AuditLogDAO';
 import { Context, Next } from 'hono';
 import { HMACHandler } from './HMACHandler';
 import { IServiceError } from '@/error';
-import { ErrorTranslationUtil } from '@/utils';
+import { EmailValidationUtil } from '@/utils/EmailValidationUtil';
+import { ErrorTranslationUtil } from '@/utils/ErrorTranslationUtil';
+import { TokenAuthUtil } from '@/utils/TokenAuthUtil';
+
+type RequestContext = Context<{ Bindings: Env; Variables: { AuthenticatedUserEmailAddress: string } }>;
+type AuthenticatedEnv = Env & {
+  DEMO_MODE?: string | undefined;
+  TEAM_DOMAIN?: string | undefined;
+  POLICY_AUD?: string | undefined;
+  AccessBridgeDB: D1DatabaseSession;
+};
 
 class MiddlewareHandlers {
   public static hmacValidation() {
@@ -13,6 +25,56 @@ class MiddlewareHandlers {
         await this.withErrorTranslation(HMACHandler.validateInternalRequest)(c, next);
       } else {
         await next();
+      }
+    };
+  }
+
+  public static activityAudit() {
+    return async (c: RequestContext, next: Next): Promise<void> => {
+      let statusCode: number = 200;
+
+      try {
+        await next();
+        statusCode = c.res.status;
+      } catch (error: unknown) {
+        if (error instanceof Error && 'status' in error && typeof error.status === 'number') {
+          statusCode = error.status;
+        } else {
+          statusCode = 500;
+        }
+        throw error;
+      } finally {
+        try {
+          const method: string = c.req.method;
+          const url: URL = new URL(c.req.url);
+          const path: string = url.pathname;
+          const action: string = AUDIT_ACTIONS[`${method}:${path}`] || `${method}:${path}`;
+          const userEmail: string = c.get('AuthenticatedUserEmailAddress') || 'unknown';
+          const ipAddress: string | undefined = c.req.header('CF-Connecting-IP');
+          const userAgentHeader: string | undefined = c.req.header('User-Agent');
+
+          const auditLogDAO: AuditLogDAO = new AuditLogDAO(c.env.AccessBridgeDB);
+          c.executionCtx.waitUntil(
+            auditLogDAO.create(userEmail, action, method, path, statusCode, undefined, undefined, ipAddress, userAgentHeader),
+          );
+        } catch {
+          console.warn('Failed to write audit log');
+        }
+      }
+    };
+  }
+
+  public static authentication() {
+    return async (c: RequestContext, next: Next): Promise<Response | void> => {
+      try {
+        const userEmail: string = await this.authenticateUserIdentity(c);
+        c.set('AuthenticatedUserEmailAddress', userEmail);
+        await next();
+      } catch (error: unknown) {
+        if (error instanceof IServiceError) {
+          return c.json({ Exception: { Type: error.getErrorType(), Message: error.getErrorMessage() } }, error.getErrorCode());
+        }
+        throw error;
       }
     };
   }
@@ -29,6 +91,19 @@ class MiddlewareHandlers {
         throw error;
       }
     };
+  }
+
+  private static async authenticateUserIdentity(c: RequestContext): Promise<string> {
+    const env: AuthenticatedEnv = c.env as AuthenticatedEnv;
+    if ((env.DEMO_MODE || DEFAULT_DEMO_MODE) === 'true') {
+      return DEMO_USER_EMAIL;
+    }
+    const authHeader: string | undefined = c.req.header('Authorization');
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token: string = authHeader.substring(7);
+      return await TokenAuthUtil.authenticateWithPAT(token, env.AccessBridgeDB);
+    }
+    return await EmailValidationUtil.getAuthenticatedUserEmail(c.req.raw, env.TEAM_DOMAIN, env.POLICY_AUD);
   }
 }
 

@@ -1,20 +1,13 @@
 import { OpenAPIRoute } from 'chanfana';
 import { Context } from 'hono';
 import type { StatusCode } from 'hono/utils/http-status';
-import { EmailValidationUtil, TokenAuthUtil, BaseUrlUtil } from '@/utils';
+import { BaseUrlUtil } from '@/utils';
 import { DefaultInternalServerError, InternalServerError, IServiceError } from '@/error';
-import { D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED, DEMO_USER_EMAIL, DEFAULT_DEMO_MODE } from '@/constants';
-import { AUDIT_ACTIONS } from '@/constants/AuditActions';
-import { AuditLogDAO } from '@/dao/AuditLogDAO';
+import { D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED, DEFAULT_DEMO_MODE } from '@/constants';
 
 abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IResponse, TEnv extends IEnv> extends OpenAPIRoute {
   async handle(c: ActivityContext<TEnv>) {
-    let userEmail: string = 'unknown';
-    let statusCode: number = 200;
-
     try {
-      userEmail = await this.authenticateUserIdentity(c);
-      c.set('AuthenticatedUserEmailAddress', userEmail);
       let body: unknown = {};
       try {
         body = await c.req.json();
@@ -26,7 +19,7 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
       const response: TResponse | ExtendedResponse<TResponse> = await this.handleRequest(request, env, c);
       if (response && typeof response === 'object' && ('body' in response || 'statusCode' in response || 'headers' in response)) {
         const extendedResponse: ExtendedResponse<TResponse> = response as ExtendedResponse<TResponse>;
-        statusCode = extendedResponse.statusCode || 200;
+        const statusCode: number = extendedResponse.statusCode || 200;
         const headers: Record<string, string> = extendedResponse.headers || {};
         Object.entries(headers).forEach(([key, value]) => {
           c.header(key, value);
@@ -40,14 +33,12 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
       return c.json(response);
     } catch (error: unknown) {
       if (error instanceof IServiceError && !(error instanceof InternalServerError)) {
-        statusCode = error.getErrorCode();
         console.warn(`Responding with ${error.getErrorType()}Error: `, error.stack);
         return c.json({ Exception: { Type: error.getErrorType(), Message: error.getErrorMessage() } }, error.getErrorCode());
       }
       if (!(error instanceof IServiceError) || error instanceof InternalServerError) {
         console.error('Caught service error during execution: ', error);
       }
-      statusCode = DefaultInternalServerError.getErrorCode();
       console.warn('Responding with DefaultInternalServerError: ', DefaultInternalServerError);
       return c.json(
         {
@@ -55,22 +46,6 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
         },
         DefaultInternalServerError.getErrorCode(),
       );
-    } finally {
-      try {
-        const method: string = c.req.method;
-        const url: URL = new URL(c.req.url);
-        const path: string = url.pathname;
-        const action: string = AUDIT_ACTIONS[`${method}:${path}`] || `${method}:${path}`;
-        const ipAddress: string | undefined = c.req.header('CF-Connecting-IP');
-        const userAgentHeader: string | undefined = c.req.header('User-Agent');
-
-        const auditLogDAO: AuditLogDAO = new AuditLogDAO(c.env.AccessBridgeDB);
-        c.executionCtx.waitUntil(
-          auditLogDAO.create(userEmail, action, method, path, statusCode, undefined, undefined, ipAddress, userAgentHeader),
-        );
-      } catch {
-        console.warn('Failed to write audit log');
-      }
     }
   }
 
@@ -89,19 +64,8 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
   }
 
   protected isDemoMode(c: ActivityContext<TEnv>): boolean {
-    return (c.env.DEMO_MODE || DEFAULT_DEMO_MODE) === 'true';
-  }
-
-  private async authenticateUserIdentity(c: ActivityContext<TEnv>): Promise<string> {
-    if (this.isDemoMode(c)) {
-      return DEMO_USER_EMAIL;
-    }
-    const authHeader: string | undefined = c.req.header('Authorization');
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token: string = authHeader.substring(7);
-      return await TokenAuthUtil.authenticateWithPAT(token, c.env.AccessBridgeDB);
-    }
-    return await EmailValidationUtil.getAuthenticatedUserEmail(c.req.raw, c.env.TEAM_DOMAIN, c.env.POLICY_AUD);
+    const env: TEnv = c.env as TEnv;
+    return (env.DEMO_MODE || DEFAULT_DEMO_MODE) === 'true';
   }
 }
 
