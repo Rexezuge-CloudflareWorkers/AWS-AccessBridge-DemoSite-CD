@@ -33,7 +33,7 @@
     "@vitejs/plugin-react": "^5.1.x",
     "terser": "^5.44.x",
     "vite": "^6.3.x",
-    "@types/node": "^22.15.x",
+    "@types/node": "^25.6.x",
     "@types/react": "^19.2.x",
     "@types/react-dom": "^19.2.x",
     "eslint": "^10.2.x",
