@@ -11,7 +11,7 @@ abstract class AbstractDurableObjectWorker extends DurableObject<Env> {
     this.printExecId();
     console.log('Durable Object triggered by HTTP request');
     try {
-      return await this.handleFetch(request);
+      return await this.onRequest(request);
     } catch (err: unknown) {
       console.error('Unhandled error in durable object fetch():', err);
       return Response.json({ error: 'Internal Error' }, { status: 500 });
@@ -25,7 +25,7 @@ abstract class AbstractDurableObjectWorker extends DurableObject<Env> {
     } as unknown as ExecutionContext;
   }
 
-  protected abstract handleFetch(request: Request): Promise<Response>;
+  protected abstract onRequest(request: Request): Promise<Response>;
 }
 
 export { AbstractDurableObjectWorker };

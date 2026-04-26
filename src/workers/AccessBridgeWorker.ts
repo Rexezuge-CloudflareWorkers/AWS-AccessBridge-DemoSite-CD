@@ -154,11 +154,11 @@ class AccessBridgeWorker extends AbstractEntrypointWorker {
     this.app = openapi;
   }
 
-  protected async handleFetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  protected async onRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     return this.app.fetch(request, env, ctx);
   }
 
-  protected async handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  protected async onScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     const cronTasksId: DurableObjectId = env.CRON_TASKS.idFromName(DURABLE_OBJECT_CRON_TASKS_NAME);
     const cronTasksWorker = env.CRON_TASKS.get(cronTasksId);
     const cronTasksRequest: Request = new Request(DURABLE_OBJECT_CRON_TASKS_RUN_URL, {

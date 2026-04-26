@@ -23,7 +23,7 @@ abstract class AbstractEntrypointWorker {
     this.printExecId();
     console.log('🎯 Worker triggered by HTTP request');
     try {
-      return await this.handleFetch(request, env, ctx);
+      return await this.onRequest(request, env, ctx);
     } catch (err: unknown) {
       console.error('❌ Unhandled error in fetch():', err);
       return new Response('Internal Error', { status: 500 });
@@ -34,15 +34,15 @@ abstract class AbstractEntrypointWorker {
     this.printExecId();
     console.log('⏭️ Worker triggered by Cron schedule');
     try {
-      await this.handleScheduled(event, env, ctx);
+      await this.onScheduled(event, env, ctx);
     } catch (err: unknown) {
       console.error('❌ Unhandled error in scheduled():', err);
     }
   }
 
-  protected abstract handleFetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
+  protected abstract onRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
 
-  protected abstract handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void>;
+  protected abstract onScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void>;
 }
 
 export { AbstractEntrypointWorker };

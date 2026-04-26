@@ -9,9 +9,9 @@ interface CronTasksRunRequest {
 }
 
 class CronTasksWorker extends AbstractDurableObjectWorker {
-  private currentRun: Promise<void> | undefined;
+  protected currentRun: Promise<void> | undefined;
 
-  protected async handleFetch(request: Request): Promise<Response> {
+  protected async onFetch(request: Request): Promise<Response> {
     const url: URL = new URL(request.url);
     if (url.pathname !== CRON_TASKS_RUN_PATH) {
       return Response.json({ error: 'Not Found' }, { status: 404 });
@@ -39,12 +39,12 @@ class CronTasksWorker extends AbstractDurableObjectWorker {
     }
   }
 
-  private async runScheduledTaskRequest(request: Request): Promise<void> {
+  protected async runScheduledTaskRequest(request: Request): Promise<void> {
     const event: ScheduledController = await this.createScheduledController(request);
     await this.runScheduledTasks(event);
   }
 
-  private async createScheduledController(request: Request): Promise<ScheduledController> {
+  protected async createScheduledController(request: Request): Promise<ScheduledController> {
     const payload: CronTasksRunRequest = await this.readRunRequest(request);
     return {
       cron: typeof payload.cron === 'string' ? payload.cron : '',
@@ -53,7 +53,7 @@ class CronTasksWorker extends AbstractDurableObjectWorker {
     };
   }
 
-  private async readRunRequest(request: Request): Promise<CronTasksRunRequest> {
+  protected async readRunRequest(request: Request): Promise<CronTasksRunRequest> {
     try {
       return (await request.json()) as CronTasksRunRequest;
     } catch (_err: unknown) {
@@ -62,7 +62,7 @@ class CronTasksWorker extends AbstractDurableObjectWorker {
     }
   }
 
-  private async runScheduledTasks(event: ScheduledController): Promise<void> {
+  protected async runScheduledTasks(event: ScheduledController): Promise<void> {
     const ctx: ExecutionContext = this.createExecutionContext();
     await new CredentialCacheRefreshTask().handle(event, this.env, ctx);
     await new AuditLogCleanupTask().handle(event, this.env, ctx);
