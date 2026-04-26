@@ -1,4 +1,4 @@
-import { AbstractWorker } from '@/base';
+import { AbstractEntrypointWorker } from '@/base';
 import { fromHono, HonoOpenAPIRouterType } from 'chanfana';
 import { Hono } from 'hono';
 import {
@@ -51,11 +51,11 @@ import {
   ListTeamAccountsRoute,
   CleanupOrphanedDataRoute,
 } from '@/endpoints';
-import { CredentialCacheRefreshTask, AuditLogCleanupTask, CostDataCollectionTask, ResourceInventoryCollectionTask } from '@/scheduled';
 import { MiddlewareHandlers } from '@/middleware';
 import { SPA_HTML } from '@/generated/spa-shell';
+import { DURABLE_OBJECT_CRON_TASKS_NAME, DURABLE_OBJECT_CRON_TASKS_RUN_URL } from '@/constants';
 
-class AccessBridgeWorker extends AbstractWorker {
+class AccessBridgeWorker extends AbstractEntrypointWorker {
   protected readonly app: Hono<{ Bindings: Env }>;
 
   constructor() {
@@ -159,10 +159,28 @@ class AccessBridgeWorker extends AbstractWorker {
   }
 
   protected async handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    await new CredentialCacheRefreshTask().handle(event, env, ctx);
-    await new AuditLogCleanupTask().handle(event, env, ctx);
-    await new CostDataCollectionTask().handle(event, env, ctx);
-    await new ResourceInventoryCollectionTask().handle(event, env, ctx);
+    const cronTasksId: DurableObjectId = env.CRON_TASKS.idFromName(DURABLE_OBJECT_CRON_TASKS_NAME);
+    const cronTasksWorker = env.CRON_TASKS.get(cronTasksId);
+    const cronTasksRequest: Request = new Request(DURABLE_OBJECT_CRON_TASKS_RUN_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        cron: event.cron,
+        scheduledTime: event.scheduledTime,
+      }),
+    });
+
+    ctx.waitUntil(
+      cronTasksWorker
+        .fetch(cronTasksRequest)
+        .then(async (response: Response): Promise<void> => {
+          if (!response.ok && response.status !== 202) {
+            console.error('CronTasksWorker returned an error response:', response.status, await response.text());
+          }
+        })
+        .catch((err: unknown): void => {
+          console.error('Failed to invoke CronTasksWorker:', err);
+        }),
+    );
   }
 }
 

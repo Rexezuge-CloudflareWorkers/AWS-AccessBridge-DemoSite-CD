@@ -70,7 +70,7 @@ Deployment has two halves: standing up the Cloudflare side (where the app lives)
 
 ### Prerequisites
 
-- **Cloudflare account** with Workers, D1, KV, Secrets Store, and Zero Trust enabled
+- **Cloudflare account** with Workers, Durable Objects, D1, KV, Secrets Store, and Zero Trust enabled
 - **Node.js 18+** (CI uses Node 24)
 - **AWS account(s)** where you want to grant access
 - Your own domain on Cloudflare (recommended, for Zero Trust-protected routes)
@@ -98,7 +98,7 @@ npx wrangler whoami
 
 ### Step 2. Create the Cloudflare resources
 
-AccessBridge needs one D1 database, one KV namespace, and one Secrets Store with two secrets inside it. Create them in any order.
+AccessBridge needs one D1 database, one KV namespace, and one Secrets Store with two secrets inside it. The Durable Object namespace for cron processing is created automatically from `wrangler.jsonc` on deploy.
 
 **D1 database:**
 
@@ -353,7 +353,7 @@ curl -I https://<your-worker-url>/
 # Are there any errors in the worker log tail?
 npx wrangler tail
 
-# Is the scheduled handler working?
+# Is the scheduled handler delegating to the cron Durable Object?
 curl "https://<your-worker-url>/__scheduled?cron=*/10+*+*+*+*"
 
 # Is the OpenAPI doc rendering?
@@ -366,7 +366,7 @@ open https://<your-worker-url>/docs
 - **Admin tab is missing** — you haven't been promoted to superadmin yet. See Step 7 of the manual guide.
 - **CI fails with "version below minimum"** — your `WRANGLER_JSONC` GitHub variable is stale. Diff it against `wrangler.jsonc.template` and bump the `$version` field.
 - **`wrangler deploy` OOMs in CI** — make sure the workflow's "Prepare for Deploy" step is hiding `open-next.config.ts` and `next.config.ts`. Without that, wrangler delegates to the OpenNext Next.js build which needs 2GB+ RAM.
-- **Credentials cached forever after rotating an IAM key** — the credential cache refresh task runs every 10 minutes. You can force it via `GET /__scheduled?cron=*/10+*+*+*+*`.
+- **Credentials cached forever after rotating an IAM key** — the credential cache refresh task runs every 10 minutes inside the cron Durable Object. You can force it via `GET /__scheduled?cron=*/10+*+*+*+*`.
 
 ---
 

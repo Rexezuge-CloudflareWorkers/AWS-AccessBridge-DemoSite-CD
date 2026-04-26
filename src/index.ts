@@ -1,6 +1,4 @@
 import { AccessBridgeWorker } from '@/workers';
-import { AbstractWorker } from '@/base';
+export { CronTasksWorker } from '@/workers';
 
-const worker: AbstractWorker = new AccessBridgeWorker();
-
-export default worker;
+export default new AccessBridgeWorker();

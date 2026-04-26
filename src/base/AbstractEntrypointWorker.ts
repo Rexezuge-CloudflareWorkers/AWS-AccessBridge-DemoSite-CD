@@ -1,4 +1,4 @@
-abstract class AbstractWorker {
+abstract class AbstractEntrypointWorker {
   protected printExecId(): string {
     const execId: string = crypto.randomUUID();
     console.log('🧭 Worker Execution ID:', execId);
@@ -8,7 +8,15 @@ abstract class AbstractWorker {
   public async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url: URL = new URL(request.url);
     if ('/__scheduled' === url.pathname) {
-      await this.scheduled({} as ScheduledController, env, ctx);
+      await this.scheduled(
+        {
+          cron: url.searchParams.get('cron') || '',
+          scheduledTime: Date.now(),
+          noRetry: (): void => undefined,
+        },
+        env,
+        ctx,
+      );
       return new Response(null, { status: 204 });
     }
 
@@ -37,4 +45,4 @@ abstract class AbstractWorker {
   protected abstract handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void>;
 }
 
-export { AbstractWorker };
+export { AbstractEntrypointWorker };

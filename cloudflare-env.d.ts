@@ -4,6 +4,7 @@
 declare namespace Cloudflare {
   interface GlobalProps {
     mainModule: typeof import('./src/index');
+    durableNamespaces: 'CronTasksWorker';
   }
   interface Env {
     AccessBridgeKV: KVNamespace;
@@ -15,6 +16,7 @@ declare namespace Cloudflare {
     MAX_TOKEN_EXPIRY_DAYS: '90';
     PRINCIPAL_TRUST_CHAIN_LIMIT: '3';
     SELF: Service<typeof import('./src/index').default>;
+    CRON_TASKS: DurableObjectNamespace<import('./src/index').CronTasksWorker>;
   }
 }
 interface CloudflareEnv extends Cloudflare.Env {}

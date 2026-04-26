@@ -6,7 +6,7 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 AWS AccessBridge is a Cloudflare Worker that provides a web-based AWS role assumption bridge. It lets users assume AWS roles across multiple accounts and generate temporary AWS Console URLs. Authentication is handled by Cloudflare Zero Trust.
 
-**Stack:** Hono + Chanfana (OpenAPI) backend on Cloudflare Workers, React 19 + Tailwind CSS v4 frontend (Vite SPA), Cloudflare D1 database (26 migrations), Cloudflare KV for credential caching, Cloudflare Secrets Store for encryption keys and internal HMAC secret.
+**Stack:** Hono + Chanfana (OpenAPI) backend on Cloudflare Workers, Durable Objects for cron task execution, React 19 + Tailwind CSS v4 frontend (Vite SPA), Cloudflare D1 database (26 migrations), Cloudflare KV for credential caching, Cloudflare Secrets Store for encryption keys and internal HMAC secret.
 
 ## Commands
 
@@ -45,7 +45,7 @@ npx wrangler d1 migrations apply --local aws-access-bridge-db     # Apply migrat
 
 ### Entry point and request flow
 
-`src/index.ts` instantiates `AccessBridgeWorker` (`src/workers/AccessBridgeWorker.ts`) which extends `AbstractWorker` (`src/base/`). AbstractWorker handles both `fetch` (HTTP) and `scheduled` (cron) events. The `/__scheduled` path triggers the scheduled handler via HTTP for testing.
+`src/index.ts` instantiates `AccessBridgeWorker` (`src/workers/AccessBridgeWorker.ts`) which extends `AbstractWorker` (`src/base/`). AbstractWorker handles both `fetch` (HTTP) and `scheduled` (cron) events. The `/__scheduled` path triggers the scheduled handler via HTTP for testing. Cron execution is delegated to the singleton `CronTasksWorker` Durable Object via the `CRON_TASKS` binding, so the AccessBridge worker only performs the trigger handoff.
 
 The frontend SPA is built to `app/dist/` by Vite. The HTML shell is embedded into the Worker bundle at build time via a custom Vite plugin that emits `src/generated/spa-shell.ts` (`SPA_HTML`). A catch-all `app.get('*')` handler serves this HTML for any non-API, non-docs, non-asset path, giving the SPA robust deep-linking support without relying on the `ASSETS` binding for HTML routing. Static assets from `app/dist/` are still served by Cloudflare's asset binding. The generated `src/generated/spa-shell.ts` is gitignored; a `postinstall` script writes a placeholder stub so type-checks pass before the first build.
 
@@ -89,7 +89,7 @@ The worker calls itself via the `SELF` service binding. These internal requests 
 
 ### Credential chain and caching
 
-Credentials are stored encrypted (AES-GCM, key from `AES_ENCRYPTION_KEY_SECRET`) in D1. The system supports multi-hop role assumption chains: a base IAM user credential assumes an intermediate role, which then assumes the target role (up to `PRINCIPAL_TRUST_CHAIN_LIMIT` hops). `CredentialCacheRefreshTask` (`src/scheduled/`) runs on a cron schedule (every 10 minutes) to pre-cache assumed credentials in KV.
+Credentials are stored encrypted (AES-GCM, key from `AES_ENCRYPTION_KEY_SECRET`) in D1. The system supports multi-hop role assumption chains: a base IAM user credential assumes an intermediate role, which then assumes the target role (up to `PRINCIPAL_TRUST_CHAIN_LIMIT` hops). `CredentialCacheRefreshTask` (`src/scheduled/`) runs through `CronTasksWorker` on a cron schedule (every 10 minutes) to pre-cache assumed credentials in KV.
 
 ### Audit logging
 
@@ -114,7 +114,7 @@ Multi-tenant team boundaries. Tables: `teams`, `team_members` (role: admin/membe
 3. **CostDataCollectionTask** — Collects AWS Cost Explorer data for enabled accounts
 4. **ResourceInventoryCollectionTask** — Collects EC2/S3/Lambda/RDS inventory for enabled accounts
 
-All run sequentially on the same cron trigger (`*/10 * * * *`) via `handleScheduled()` in `AccessBridgeWorker`.
+All run sequentially on the same cron trigger (`*/10 * * * *`) inside the singleton `CronTasksWorker` Durable Object. `AccessBridgeWorker.handleScheduled()` only invokes that Durable Object through the `CRON_TASKS` binding.
 
 ### Data access layer
 
@@ -172,7 +172,7 @@ The `npm run tsc` command checks both configs.
 
 ### Tests
 
-Vitest (`vitest.config.ts`) runs ~29 test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (1 — HMAC handler), `test/model/` (1), `test/utils/` (9 util tests).
+Vitest (`vitest.config.ts`) runs ~30 test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (1 — HMAC handler), `test/model/` (1), `test/utils/` (9 util tests), `test/workers/` (1).
 
 ## Code Style
 
@@ -183,12 +183,13 @@ Vitest (`vitest.config.ts`) runs ~29 test files under `test/`, organized by area
 
 ## Configuration
 
-`wrangler.jsonc` contains the worker config (D1 binding, KV binding, secrets store, service binding, vars, cron triggers). It is gitignored. A `wrangler.jsonc.template` is the public version with placeholder IDs. The template has `$version` and `$minimumVersion` fields (commented); CI validates that fork configs are not outdated against `$minimumVersion`.
+`wrangler.jsonc` contains the worker config (D1 binding, KV binding, Durable Object binding, secrets store, service binding, vars, cron triggers). It is gitignored. A `wrangler.jsonc.template` is the public version with placeholder IDs. The template has `$version` and `$minimumVersion` fields (commented); CI validates that fork configs are not outdated against `$minimumVersion`.
 
 **Bindings (from template):**
 
 - D1: `AccessBridgeDB` → `aws-access-bridge-db`
 - KV: `AccessBridgeKV`
+- Durable Object: `CRON_TASKS` → `CronTasksWorker` (singleton name `cron-tasks`)
 - Service: `SELF` → `aws-access-bridge` (for internal HMAC-signed self-calls)
 - Secrets Store: `AES_ENCRYPTION_KEY_SECRET` (credential encryption), `INTERNAL_HMAC_SECRET` (internal request signing)
 - Assets: `./app/dist/` (Vite SPA output)
