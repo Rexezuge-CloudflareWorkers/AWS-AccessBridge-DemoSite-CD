@@ -1,5 +1,5 @@
 {
-  // "$version": 1777211205,
+  // "$version": 1777219199,
   // "$minimumVersion": 1777211205,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aws-access-bridge",
@@ -37,12 +37,6 @@
       },
     ],
   },
-  "migrations": [
-    {
-      "tag": "v1777211205",
-      "new_sqlite_classes": ["CronTasksWorker"],
-    },
-  ],
   "services": [
     {
       "binding": "SELF",
