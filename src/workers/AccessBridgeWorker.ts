@@ -1,4 +1,4 @@
-import { AbstractWorker } from '@/base';
+import { AbstractEntrypointWorker } from '@/base';
 import { fromHono, HonoOpenAPIRouterType } from 'chanfana';
 import { Hono } from 'hono';
 import {
@@ -53,11 +53,9 @@ import {
 } from '@/endpoints';
 import { MiddlewareHandlers } from '@/middleware';
 import { SPA_HTML } from '@/generated/spa-shell';
+import { DURABLE_OBJECT_CRON_TASKS_NAME, DURABLE_OBJECT_CRON_TASKS_RUN_URL } from '@/constants';
 
-const CRON_TASKS_OBJECT_NAME: string = 'cron-tasks';
-const CRON_TASKS_RUN_URL: string = 'https://cron-tasks.internal/run';
-
-class AccessBridgeWorker extends AbstractWorker {
+class AccessBridgeWorker extends AbstractEntrypointWorker {
   protected readonly app: Hono<{ Bindings: Env }>;
 
   constructor() {
@@ -161,9 +159,9 @@ class AccessBridgeWorker extends AbstractWorker {
   }
 
   protected async handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    const cronTasksId: DurableObjectId = env.CRON_TASKS.idFromName(CRON_TASKS_OBJECT_NAME);
+    const cronTasksId: DurableObjectId = env.CRON_TASKS.idFromName(DURABLE_OBJECT_CRON_TASKS_NAME);
     const cronTasksWorker = env.CRON_TASKS.get(cronTasksId);
-    const cronTasksRequest: Request = new Request(CRON_TASKS_RUN_URL, {
+    const cronTasksRequest: Request = new Request(DURABLE_OBJECT_CRON_TASKS_RUN_URL, {
       method: 'POST',
       body: JSON.stringify({
         cron: event.cron,

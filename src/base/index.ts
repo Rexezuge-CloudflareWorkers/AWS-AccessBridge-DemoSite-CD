@@ -1,2 +1,2 @@
-export { AbstractWorker } from './AbstractWorker';
-export { IDurableObjectWorker } from './IDurableObjectWorker';
+export { AbstractEntrypointWorker } from './AbstractEntrypointWorker';
+export { AbstractDurableObjectWorker } from './AbstractDurableObjectWorker';

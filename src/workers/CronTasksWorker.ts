@@ -1,4 +1,4 @@
-import { IDurableObjectWorker } from '@/base';
+import { AbstractDurableObjectWorker } from '@/base';
 import { AuditLogCleanupTask, CostDataCollectionTask, CredentialCacheRefreshTask, ResourceInventoryCollectionTask } from '@/scheduled';
 
 const CRON_TASKS_RUN_PATH: string = '/run';
@@ -8,7 +8,7 @@ interface CronTasksRunRequest {
   scheduledTime?: unknown;
 }
 
-class CronTasksWorker extends IDurableObjectWorker {
+class CronTasksWorker extends AbstractDurableObjectWorker {
   private currentRun: Promise<void> | undefined;
 
   protected async handleFetch(request: Request): Promise<Response> {
@@ -57,6 +57,7 @@ class CronTasksWorker extends IDurableObjectWorker {
     try {
       return (await request.json()) as CronTasksRunRequest;
     } catch (_err: unknown) {
+      console.debug(_err);
       return {};
     }
   }

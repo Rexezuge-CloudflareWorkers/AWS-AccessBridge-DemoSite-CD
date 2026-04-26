@@ -1,4 +1,4 @@
-abstract class AbstractWorker {
+abstract class AbstractEntrypointWorker {
   protected printExecId(): string {
     const execId: string = crypto.randomUUID();
     console.log('🧭 Worker Execution ID:', execId);
@@ -45,4 +45,4 @@ abstract class AbstractWorker {
   protected abstract handleScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void>;
 }
 
-export { AbstractWorker };
+export { AbstractEntrypointWorker };
