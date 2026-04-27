@@ -4,6 +4,7 @@ import type { StatusCode } from 'hono/utils/http-status';
 import { BaseUrlUtil } from '@/utils';
 import { DefaultInternalServerError, InternalServerError, IServiceError } from '@/error';
 import { D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED, DEFAULT_DEMO_MODE } from '@/constants';
+import { validateRequestInput } from '@/schema';
 
 abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IResponse, TEnv extends IEnv> extends OpenAPIRoute {
   async handle(c: ActivityContext<TEnv>) {
@@ -14,7 +15,8 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
       } catch {
         body = {};
       }
-      const request: TRequest = { ...(body as TRequest), raw: c.req };
+      const validatedBody: unknown = await validateRequestInput(c.req.raw, body);
+      const request: TRequest = { ...(validatedBody as TRequest), raw: c.req.raw };
       const env: TEnv = { ...(c.env as TEnv), AccessBridgeDB: c.env.AccessBridgeDB.withSession(D1_SESSION_CONSTRAINT_FIRST_UNCONSTRAINED) };
       const response: TResponse | ExtendedResponse<TResponse> = await this.handleRequest(request, env, c);
       if (response && typeof response === 'object' && ('body' in response || 'statusCode' in response || 'headers' in response)) {

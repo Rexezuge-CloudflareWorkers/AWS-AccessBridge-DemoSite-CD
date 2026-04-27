@@ -11,7 +11,7 @@ interface CronTasksRunRequest {
 class CronTasksWorker extends AbstractDurableObjectWorker {
   protected currentRun: Promise<void> | undefined;
 
-  protected async onFetch(request: Request): Promise<Response> {
+  protected async onRequest(request: Request): Promise<Response> {
     const url: URL = new URL(request.url);
     if (url.pathname !== CRON_TASKS_RUN_PATH) {
       return Response.json({ error: 'Not Found' }, { status: 404 });
