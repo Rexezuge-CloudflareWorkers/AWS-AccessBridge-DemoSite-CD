@@ -87,7 +87,6 @@ interface ExtendedResponse<TResponse extends IResponse> {
 interface IEnv {
   TEAM_DOMAIN?: string | undefined;
   POLICY_AUD?: string | undefined;
-  API_INTERNAL_HOST?: string | undefined;
   SERVE_SPA_FROM_WORKER?: string | undefined;
   DEMO_MODE?: string | undefined;
   Variables: {

@@ -14,7 +14,6 @@ type AuthenticatedEnv = Env & {
   DEMO_MODE?: string | undefined;
   TEAM_DOMAIN?: string | undefined;
   POLICY_AUD?: string | undefined;
-  API_INTERNAL_HOST?: string | undefined;
   AccessBridgeDB: D1DatabaseSession;
 };
 

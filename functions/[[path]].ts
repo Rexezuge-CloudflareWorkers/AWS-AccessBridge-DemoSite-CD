@@ -1,6 +1,6 @@
 import {
   CF_CONNECTING_IP_HEADER,
-  DEFAULT_API_INTERNAL_HOSTNAME,
+  API_WORKER_BASE_HOSTNAME,
   FORWARDED_FOR_HEADER,
   FORWARDED_HOST_HEADER,
   FORWARDED_PROTO_HEADER,
@@ -16,7 +16,7 @@ export const proxyToApi: PagesFunction<PagesProxyEnv> = async ({ request, env })
   const internalUrl: URL = new URL(request.url);
 
   internalUrl.protocol = 'https:';
-  internalUrl.hostname = DEFAULT_API_INTERNAL_HOSTNAME;
+  internalUrl.hostname = API_WORKER_BASE_HOSTNAME;
   internalUrl.port = '';
 
   const headers: Headers = new Headers(request.headers);

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CF_CONNECTING_IP_HEADER,
   CF_RAY_HEADER,
-  DEFAULT_API_INTERNAL_HOSTNAME,
+  API_WORKER_BASE_HOSTNAME,
   FORWARDED_FOR_HEADER,
   FORWARDED_HOST_HEADER,
   FORWARDED_PROTO_HEADER,
@@ -21,7 +21,7 @@ describe('RequestOriginUtil', () => {
   describe('isPagesProxyRequest', () => {
     it('returns true for api.invalid requests with Cloudflare metadata and required headers', () => {
       const request = withCloudflareMetadata(
-        new Request(`https://${DEFAULT_API_INTERNAL_HOSTNAME}/api/test`, {
+        new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/test`, {
           headers: {
             [CF_CONNECTING_IP_HEADER]: '203.0.113.10',
             [CF_RAY_HEADER]: 'test-ray',
@@ -48,7 +48,7 @@ describe('RequestOriginUtil', () => {
     });
 
     it('returns false when api.invalid lacks Cloudflare request metadata', () => {
-      const request = new Request(`https://${DEFAULT_API_INTERNAL_HOSTNAME}/api/test`, {
+      const request = new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/test`, {
         headers: {
           [CF_CONNECTING_IP_HEADER]: '203.0.113.10',
           [CF_RAY_HEADER]: 'test-ray',
@@ -62,7 +62,7 @@ describe('RequestOriginUtil', () => {
   describe('getClientIpAddress', () => {
     it('uses the first forwarded-for address for trusted Pages proxy requests', () => {
       const request = withCloudflareMetadata(
-        new Request(`https://${DEFAULT_API_INTERNAL_HOSTNAME}/api/test`, {
+        new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/test`, {
           headers: {
             [CF_CONNECTING_IP_HEADER]: '192.0.2.10',
             [CF_RAY_HEADER]: 'test-ray',

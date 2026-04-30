@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import {
   CF_CONNECTING_IP_HEADER,
   CF_RAY_HEADER,
-  DEFAULT_API_INTERNAL_HOSTNAME,
+  API_WORKER_BASE_HOSTNAME,
   DEMO_USER_EMAIL,
   FORWARDED_FOR_HEADER,
   INTERNAL_USER_EMAIL_HEADER,
@@ -130,7 +130,7 @@ describe('MiddlewareHandlers', () => {
 
       const response: Response = await app.fetch(
         withCloudflareMetadata(
-          new Request(`https://${DEFAULT_API_INTERNAL_HOSTNAME}/api/test`, {
+          new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/test`, {
             headers: {
               [CF_CONNECTING_IP_HEADER]: '192.0.2.10',
               [CF_RAY_HEADER]: 'test-ray',

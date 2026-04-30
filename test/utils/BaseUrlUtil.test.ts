@@ -4,7 +4,7 @@ import { InternalServerError } from '@/error';
 import {
   CF_CONNECTING_IP_HEADER,
   CF_RAY_HEADER,
-  DEFAULT_API_INTERNAL_HOSTNAME,
+  API_WORKER_BASE_HOSTNAME,
   FORWARDED_HOST_HEADER,
   FORWARDED_PROTO_HEADER,
   INTERNAL_BASE_URL_HEADER,
@@ -33,7 +33,7 @@ describe('BaseUrlUtil', () => {
 
     it('returns forwarded origin for trusted Pages proxy requests', () => {
       const request = withCloudflareMetadata(
-        new Request(`https://${DEFAULT_API_INTERNAL_HOSTNAME}/api/aws/federate`, {
+        new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/aws/federate`, {
           headers: {
             [CF_CONNECTING_IP_HEADER]: '203.0.113.10',
             [CF_RAY_HEADER]: 'test-ray',
