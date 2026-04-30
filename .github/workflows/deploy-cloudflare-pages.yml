@@ -46,7 +46,7 @@ jobs:
       - name: Deploy with Wrangler Pages
         if: ${{ github.event_name != 'pull_request' }}
         run: |
-          npx wrangler pages project deploy \
+          npx wrangler pages deploy \
             --project-name "${CLOUDFLARE_PAGES_PROJECT_NAME}" \
             --branch "${GITHUB_REF_NAME}" \
             --commit-hash "${GITHUB_SHA}" \
