@@ -62,7 +62,7 @@ abstract class IActivityAPIRoute<TRequest extends IRequest, TResponse extends IR
   }
 
   protected getBaseUrl(c: ActivityContext<TEnv>): string {
-    return BaseUrlUtil.getBaseUrl(c.req.raw);
+    return BaseUrlUtil.getBaseUrl(c.req.raw, c.env);
   }
 
   protected isDemoMode(c: ActivityContext<TEnv>): boolean {
@@ -87,6 +87,7 @@ interface ExtendedResponse<TResponse extends IResponse> {
 interface IEnv {
   TEAM_DOMAIN?: string | undefined;
   POLICY_AUD?: string | undefined;
+  SERVE_SPA_FROM_WORKER?: string | undefined;
   DEMO_MODE?: string | undefined;
   Variables: {
     AuthenticatedUserEmailAddress: string;

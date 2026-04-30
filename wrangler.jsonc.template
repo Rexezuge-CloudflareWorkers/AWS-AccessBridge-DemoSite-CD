@@ -1,13 +1,13 @@
 {
-  // "$version": 1777221735,
-  // "$minimumVersion": 1777211205,
+  // "$version": 1777563301,
+  // "$minimumVersion": 1777563301,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aws-access-bridge",
   "main": "src/index.ts",
   "compatibility_date": "2025-11-29",
   "compatibility_flags": [],
   "preview_urls": false,
-  "workers_dev": true,
+  "workers_dev": false,
   "minify": true,
   "observability": {
     "logs": {
@@ -25,9 +25,6 @@
   "routes": [],
   "placement": {
     "mode": "off",
-  },
-  "assets": {
-    "directory": "./app/dist/",
   },
   "durable_objects": {
     "bindings": [
@@ -76,6 +73,7 @@
     },
   ],
   "vars": {
+    "SERVE_SPA_FROM_WORKER": "false",
     "POLICY_AUD": "you-cloudflare-zero-trust-application-aud",
     "TEAM_DOMAIN": "https://your-cloudflare-zero-trust-team-domain.cloudflareaccess.com",
     "MAX_TOKENS_PER_USER": "5",

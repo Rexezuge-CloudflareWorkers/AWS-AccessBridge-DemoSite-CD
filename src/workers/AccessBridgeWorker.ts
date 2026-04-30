@@ -53,7 +53,7 @@ import {
 } from '@/endpoints';
 import { MiddlewareHandlers } from '@/middleware';
 import { SPA_HTML } from '@/generated/spa-shell';
-import { DURABLE_OBJECT_NAMESPACE_GLOBAL, DURABLE_OBJECT_CRON_TASKS_RUN_URL } from '@/constants';
+import { DEFAULT_SERVE_SPA_FROM_WORKER, DURABLE_OBJECT_NAMESPACE_GLOBAL, DURABLE_OBJECT_CRON_TASKS_RUN_URL } from '@/constants';
 
 class AccessBridgeWorker extends AbstractEntrypointWorker {
   protected readonly app: Hono<{ Bindings: Env }>;
@@ -144,6 +144,11 @@ class AccessBridgeWorker extends AbstractEntrypointWorker {
 
     // SPA catch-all: serve embedded index.html for frontend routes
     app.get('*', (c) => {
+      const env = c.env as Env & { SERVE_SPA_FROM_WORKER?: string | undefined };
+      const serveSpaFromWorker: boolean = (env.SERVE_SPA_FROM_WORKER || DEFAULT_SERVE_SPA_FROM_WORKER) === 'true';
+      if (!serveSpaFromWorker) {
+        return c.notFound();
+      }
       const path: string = new URL(c.req.url).pathname;
       if (path.startsWith('/api/') || path.startsWith('/openapi.') || path === '/docs' || path === '/redocs' || /\.\w+$/.test(path)) {
         return c.notFound();

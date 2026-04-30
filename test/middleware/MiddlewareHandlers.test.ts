@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
-import { DEMO_USER_EMAIL, INTERNAL_USER_EMAIL_HEADER, SELF_WORKER_BASE_HOSTNAME } from '@/constants';
+import {
+  CF_CONNECTING_IP_HEADER,
+  CF_RAY_HEADER,
+  API_WORKER_BASE_HOSTNAME,
+  DEMO_USER_EMAIL,
+  FORWARDED_FOR_HEADER,
+  INTERNAL_USER_EMAIL_HEADER,
+  SELF_WORKER_BASE_HOSTNAME,
+} from '@/constants';
 import { UnauthorizedError } from '@/error';
 import { TokenAuthUtil } from '@/utils/TokenAuthUtil';
 
@@ -47,6 +55,14 @@ function createEnv(overrides: Partial<Env> = {}): Env {
   } as Env;
 }
 
+function withCloudflareMetadata(request: Request): Request {
+  Object.defineProperty(request, 'cf', {
+    value: { colo: 'SFO' },
+    configurable: true,
+  });
+  return request;
+}
+
 function createApp(includeAudit: boolean = false): TestApp {
   const app = new Hono<{ Bindings: Env; Variables: { AuthenticatedUserEmailAddress: string } }>();
   if (includeAudit) {
@@ -80,7 +96,7 @@ describe('MiddlewareHandlers', () => {
       const response: Response = await app.fetch(
         new Request('https://worker.example.com/api/test', {
           headers: {
-            'CF-Connecting-IP': '203.0.113.10',
+            [CF_CONNECTING_IP_HEADER]: '203.0.113.10',
             'User-Agent': 'Vitest',
           },
         }),
@@ -102,6 +118,78 @@ describe('MiddlewareHandlers', () => {
         'Vitest',
       );
       expect(waitUntilSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('uses the first forwarded-for address for trusted Pages proxy audit logs', async () => {
+      const app = new Hono<{ Bindings: Env; Variables: { AuthenticatedUserEmailAddress: string } }>();
+      app.use('*', MiddlewareHandlers.activityAudit());
+      app.get('/api/test', async (c) => {
+        c.set('AuthenticatedUserEmailAddress', 'user@example.com');
+        return c.json({ ok: true });
+      });
+
+      const response: Response = await app.fetch(
+        withCloudflareMetadata(
+          new Request(`https://${API_WORKER_BASE_HOSTNAME}/api/test`, {
+            headers: {
+              [CF_CONNECTING_IP_HEADER]: '192.0.2.10',
+              [CF_RAY_HEADER]: 'test-ray',
+              [FORWARDED_FOR_HEADER]: '203.0.113.10, 198.51.100.8',
+            },
+          }),
+        ),
+        createEnv(),
+        createExecutionContext(),
+      );
+
+      expect(response.status).toBe(200);
+      expect(auditLogCreateSpy).toHaveBeenCalledWith(
+        'user@example.com',
+        'GET:/api/test',
+        'GET',
+        '/api/test',
+        200,
+        undefined,
+        undefined,
+        '203.0.113.10',
+        undefined,
+      );
+    });
+
+    it('ignores spoofed forwarded-for headers for direct audit logs', async () => {
+      const app = new Hono<{ Bindings: Env; Variables: { AuthenticatedUserEmailAddress: string } }>();
+      app.use('*', MiddlewareHandlers.activityAudit());
+      app.get('/api/test', async (c) => {
+        c.set('AuthenticatedUserEmailAddress', 'user@example.com');
+        return c.json({ ok: true });
+      });
+
+      const response: Response = await app.fetch(
+        withCloudflareMetadata(
+          new Request('https://worker.example.com/api/test', {
+            headers: {
+              [CF_CONNECTING_IP_HEADER]: '192.0.2.10',
+              [CF_RAY_HEADER]: 'test-ray',
+              [FORWARDED_FOR_HEADER]: '203.0.113.10',
+            },
+          }),
+        ),
+        createEnv(),
+        createExecutionContext(),
+      );
+
+      expect(response.status).toBe(200);
+      expect(auditLogCreateSpy).toHaveBeenCalledWith(
+        'user@example.com',
+        'GET:/api/test',
+        'GET',
+        '/api/test',
+        200,
+        undefined,
+        undefined,
+        '192.0.2.10',
+        undefined,
+      );
     });
 
     it('writes an audit log entry with unknown user when authentication has not populated the context', async () => {
@@ -193,7 +281,7 @@ describe('MiddlewareHandlers', () => {
       });
     });
 
-    it('authenticates using the Cloudflare Access email header', async () => {
+    it('does not authenticate using the Cloudflare Access email header', async () => {
       const app: TestApp = createApp();
 
       const response: Response = await app.fetch(
@@ -206,8 +294,13 @@ describe('MiddlewareHandlers', () => {
         createExecutionContext(),
       );
 
-      expect(response.status).toBe(200);
-      await expect(response.json()).resolves.toEqual({ email: 'header@example.com' });
+      expect(response.status).toBe(401);
+      await expect(response.json()).resolves.toEqual({
+        Exception: {
+          Type: 'Unauthorized',
+          Message: 'No Cloudflare Access JWT token provided in request headers.',
+        },
+      });
     });
 
     it('authenticates internal self-worker requests from the internal user header', async () => {
@@ -236,7 +329,7 @@ describe('MiddlewareHandlers', () => {
       await expect(response.json()).resolves.toEqual({
         Exception: {
           Type: 'Unauthorized',
-          Message: 'No authenticated user email or JWT token provided in request headers.',
+          Message: 'No Cloudflare Access JWT token provided in request headers.',
         },
       });
       expect(auditLogCreateSpy).toHaveBeenCalledWith(

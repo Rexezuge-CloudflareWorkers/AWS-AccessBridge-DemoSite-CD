@@ -103,7 +103,7 @@ class CreateTeamRoute extends IAdminActivityAPIRoute<CreateTeamRequest, CreateTe
                   type: 'object' as const,
                   properties: {
                     Type: { type: 'string' as const, example: 'UnauthorizedError' },
-                    Message: { type: 'string' as const, example: 'No authenticated user email provided in request headers.' },
+                    Message: { type: 'string' as const, example: 'No Cloudflare Access JWT token provided in request headers.' },
                   },
                 },
               },

@@ -202,7 +202,7 @@ class SetRoleConfigRoute extends IAdminActivityAPIRoute<SetRoleConfigRequest, Se
                     Message: {
                       type: 'string' as const,
                       description: 'Authentication error details',
-                      example: 'No authenticated user email provided in request headers.',
+                      example: 'No Cloudflare Access JWT token provided in request headers.',
                     },
                   },
                 },

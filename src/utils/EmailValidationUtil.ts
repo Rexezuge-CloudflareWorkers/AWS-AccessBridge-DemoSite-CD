@@ -18,27 +18,29 @@ class EmailValidationUtil {
       throw new InternalServerError('Internal call missing required user email header.');
     }
 
-    // Try email header first
-    const userEmail = request.headers.get('Cf-Access-Authenticated-User-Email');
-    if (userEmail) {
-      return userEmail;
-    }
-
-    // Fallback to JWT verification
     const token = request.headers.get('cf-access-jwt-assertion');
     if (!token) {
-      throw new UnauthorizedError('No authenticated user email or JWT token provided in request headers.');
+      throw new UnauthorizedError('No Cloudflare Access JWT token provided in request headers.');
     }
 
     if (!teamDomain || !policyAud) {
       throw new UnauthorizedError('Missing required JWT verification configuration.');
     }
 
+    const normalizedTeamDomain: string = teamDomain.replace(/\/+$/, '');
+    const normalizedPolicyAud: string = policyAud.trim();
+    if (!normalizedPolicyAud) {
+      throw new UnauthorizedError('Missing required JWT verification configuration.');
+    }
+    if (normalizedPolicyAud.includes(',')) {
+      throw new UnauthorizedError('Multiple JWT audiences are not supported. Configure a single POLICY_AUD value.');
+    }
+
     try {
-      const JWKS = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+      const JWKS = createRemoteJWKSet(new URL(`${normalizedTeamDomain}/cdn-cgi/access/certs`));
       const { payload } = await jwtVerify(token, JWKS, {
-        issuer: teamDomain,
-        audience: policyAud,
+        issuer: normalizedTeamDomain,
+        audience: normalizedPolicyAud,
       });
 
       const email = payload.email as string;

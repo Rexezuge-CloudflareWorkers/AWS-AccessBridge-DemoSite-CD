@@ -7,6 +7,7 @@ export { EmailValidationUtil } from './EmailValidationUtil';
 export { TokenAuthUtil } from './TokenAuthUtil';
 export { ErrorDeserializationUtil } from './ErrorDeserializationUtil';
 export { ErrorTranslationUtil } from './ErrorTranslationUtil';
+export { RequestOriginUtil } from './RequestOriginUtil';
 export { TimestampUtil } from './TimestampUtil';
 export { UUIDUtil } from './UUIDUtil';
 export { AwsApiUtil } from './AwsApiUtil';

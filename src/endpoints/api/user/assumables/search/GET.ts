@@ -154,7 +154,7 @@ class SearchAccountsRoute extends IActivityAPIRoute<SearchAccountsRequest, Searc
                     },
                     Message: {
                       type: 'string' as const,
-                      example: 'No authenticated user email provided in request headers.',
+                      example: 'No Cloudflare Access JWT token provided in request headers.',
                     },
                   },
                 },
