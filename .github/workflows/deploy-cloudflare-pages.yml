@@ -32,20 +32,21 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
-      - name: Check Pages Project Name
+      - name: Configure Pages Service Bindings
         if: ${{ github.event_name != 'pull_request' }}
         run: |
           if [ -z "${CLOUDFLARE_PAGES_PROJECT_NAME}" ]; then
             echo "CLOUDFLARE_PAGES_PROJECT_NAME repository variable is required"
             exit 1
           fi
+          cp wrangler-pages.jsonc.template wrangler.jsonc
         env:
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
 
       - name: Deploy with Wrangler Pages
         if: ${{ github.event_name != 'pull_request' }}
         run: |
-          npx wrangler pages deploy app/dist \
+          npx wrangler pages project deploy \
             --project-name "${CLOUDFLARE_PAGES_PROJECT_NAME}" \
             --branch "${GITHUB_REF_NAME}" \
             --commit-hash "${GITHUB_SHA}" \
