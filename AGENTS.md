@@ -12,60 +12,86 @@ AWS AccessBridge is a Cloudflare Worker that provides a web-based AWS role assum
 
 ```bash
 # Install
-# `postinstall` runs `scripts/ensure-spa-shell-stub.mjs` so tsc works before first build
+pnpm install              # Installs all workspace dependencies
 
 # Development
-npm run dev               # Vite dev server for frontend SPA
-npm run dev:ssr           # Next.js dev server (SSR mode, needs 2GB+ RAM)
+pnpm dev                 # Vite dev server for frontend SPA
+pnpm --filter @aws-access-bridge/api dev   # Run API worker locally (uses wrangler dev)
 
 # Build
-npm run build             # prettier + lint + Vite build of the SPA (fast, ~7s)
-npm run build:ssr         # Build Next.js SSR via OpenNext (needs 2GB+ RAM)
+pnpm build               # Build all packages (web then api)
+pnpm --filter @aws-access-bridge/web build # Build frontend only
 
 # Deploy
-npm run deploy            # build + `wrangler deploy --dry-run` + `wrangler deploy`
-npm run deploy:ssr        # OpenNext build + deploy (needs 2GB+ RAM)
+pnpm deploy              # build + `wrangler deploy --dry-run` + `wrangler deploy`
 
 # Code Quality
-npm run prettier          # Format all code
-npm run lint              # Lint + autofix TypeScript
-npm run tsc               # Type-check frontend + backend (two tsconfigs)
-npm run test              # Run vitest tests
+pnpm prettier            # Format all code
+pnpm lint                # Lint + autofix TypeScript
+pnpm typecheck           # Type-check all packages
+pnpm test                # Run vitest tests
 
 # Cloudflare
-npm run cf-typegen        # Regenerate cloudflare-env.d.ts from wrangler.jsonc
-npx wrangler dev          # Local Cloudflare dev server
+pnpm exec wrangler dev   # Local Cloudflare dev server
+pnpm exec wrangler deploy --dry-run  # Dry-run deploy
 
 # Database
-npx wrangler d1 migrations apply --remote aws-access-bridge-db    # Apply migrations to remote D1
-npx wrangler d1 migrations apply --local aws-access-bridge-db     # Apply migrations locally
+pnpm exec wrangler d1 migrations apply --remote aws-access-bridge-db    # Apply migrations to remote D1
+pnpm exec wrangler d1 migrations apply --local aws-access-bridge-db     # Apply migrations locally
+```
+
+## Mono-repo Structure
+
+```
+aws-access-bridge/
+├── apps/
+│   ├── web/                    # React SPA (Vite)
+│   │   ├── src/
+│   │   │   ├── SpaApp.tsx      # SPA entry point
+│   │   │   ├── main.tsx
+│   │   │   └── components/    # React components
+│   │   ├── dist/               # Build output
+│   │   └── package.json
+│   └── api/                    # Cloudflare Worker (backend)
+│       ├── src/
+│       │   ├── index.ts        # Worker entry point
+│       │   ├── workers/         # AccessBridgeWorker, CronTasksWorker
+│       │   ├── endpoints/       # API route handlers
+│       │   ├── dao/             # Data access objects
+│       │   ├── model/           # Internal models
+│       │   ├── middleware/      # HMAC, auth, audit
+│       │   ├── scheduled/       # Cron task handlers
+│       │   ├── schema/          # Zod schemas (re-exports from shared)
+│       │   └── generated/      # SPA shell (auto-generated at build)
+│       └── package.json
+├── packages/
+│   └── shared/                 # Shared types, schemas, utilities
+│       ├── src/
+│       │   ├── schema/         # Zod input/output/common schemas
+│       │   ├── types.ts
+│       │   └── utils.ts
+│       └── package.json
+├── migrations/                  # D1 migrations
+├── test/                       # Vitest tests
+└── scripts/                    # Build/deploy scripts
 ```
 
 ## Architecture
 
 ### Entry point and request flow
 
-`src/index.ts` instantiates `AccessBridgeWorker` (`src/workers/AccessBridgeWorker.ts`) which extends `AbstractWorker` (`src/base/`). AbstractWorker handles both `fetch` (HTTP) and `scheduled` (cron) events. The `/__scheduled` path triggers the scheduled handler via HTTP for testing. Cron execution is delegated to the singleton `CronTasksWorker` Durable Object via the `CRON_TASKS` binding, so the AccessBridge worker only performs the trigger handoff.
+`apps/api/src/index.ts` instantiates `AccessBridgeWorker` (`apps/api/src/workers/AccessBridgeWorker.ts`) which extends `AbstractWorker` (`apps/api/src/base/`). AbstractWorker handles both `fetch` (HTTP) and `scheduled` (cron) events. The `/__scheduled` path triggers the scheduled handler via HTTP for testing. Cron execution is delegated to the singleton `CronTasksWorker` Durable Object via the `CRON_TASKS` binding, so the AccessBridge worker only performs the trigger handoff.
 
-The frontend SPA is built to `app/dist/` by Vite. The HTML shell is embedded into the Worker bundle at build time via a custom Vite plugin that emits `src/generated/spa-shell.ts` (`SPA_HTML`). A catch-all `app.get('*')` handler serves this HTML for any non-API, non-docs, non-asset path, giving the SPA robust deep-linking support without relying on the `ASSETS` binding for HTML routing. Static assets from `app/dist/` are still served by Cloudflare's asset binding. The generated `src/generated/spa-shell.ts` is gitignored; a `postinstall` script writes a placeholder stub so type-checks pass before the first build.
-
-### Dual frontend architecture
-
-The project has two frontend build paths:
-
-1. **Vite SPA** (current, used in CI): `app/SpaApp.tsx` is the entry point. Built with `vite.config.ts` to `app/dist/`. Lightweight (~7s build, <100MB RAM). Client-side rendered with pathname-based view switching between `AccountList` (default), `CostDashboard`, `ResourceInventory`, `AdminPage`, and `Unauthorized`. The `*View` wrappers and `HomePage` exist for the Next.js path.
-2. **Next.js SSR** (future): `app/layout.tsx` + `app/page.tsx` with the Next.js App Router. Built via OpenNext Cloudflare adapter (`open-next.config.ts`, `next.config.ts`). Requires 2GB+ RAM. The Hono backend is mounted via catch-all route handlers at `app/api/[[...path]]/route.ts`.
-
-Both use the same shared components from `components/` at the project root.
+The frontend SPA is built to `apps/web/dist/` by Vite. The HTML shell is embedded into the Worker bundle at build time via a custom Vite plugin that emits `apps/api/src/generated/spa-shell.ts` (`SPA_HTML`). A catch-all `app.get('*')` handler serves this HTML for any non-API, non-docs, non-asset path, giving the SPA robust deep-linking support without relying on the `ASSETS` binding for HTML routing. Static assets from `apps/web/dist/` are served by Cloudflare's asset binding. A `postinstall` script writes a placeholder stub so type-checks pass before the first build.
 
 ### Endpoint pattern
 
-Every API endpoint is a standalone file under `src/endpoints/api/{domain}/{resource}/{METHOD}.ts`. Each extends one of two abstract base classes:
+Every API endpoint is a standalone file under `apps/api/src/endpoints/api/{domain}/{resource}/{METHOD}.ts`. Each extends one of two abstract base classes:
 
-- **`IActivityAPIRoute`** (`src/endpoints/IActivityAPIRoute.ts`) — Authenticates the user (via Cloudflare Zero Trust JWT or Bearer PAT), parses the request body, writes an audit log entry via `waitUntil()`, and delegates to `handleRequest()`. All endpoints inherit from this.
-- **`IAdminActivityAPIRoute`** (`src/endpoints/IAdminActivityAPIRoute.ts`) — Extends `IActivityAPIRoute`, adds a superadmin check and a demo-mode guard (throws `MethodNotAllowedError` when `DEMO_MODE=true`) before delegating to `handleAdminRequest()`.
+- **`IActivityAPIRoute`** (`apps/api/src/endpoints/IActivityAPIRoute.ts`) — Authenticates the user (via Cloudflare Zero Trust JWT or Bearer PAT), parses the request body, writes an audit log entry via `waitUntil()`, and delegates to `handleRequest()`. All endpoints inherit from this.
+- **`IAdminActivityAPIRoute`** (`apps/api/src/endpoints/IAdminActivityAPIRoute.ts`) — Extends `IActivityAPIRoute`, adds a superadmin check and a demo-mode guard (throws `MethodNotAllowedError` when `DEMO_MODE=true`) before delegating to `handleAdminRequest()`.
 
-Endpoints are re-exported through `src/endpoints/index.ts` (cast to `any` for Chanfana compatibility) and registered as Hono routes in `AccessBridgeWorker`.
+Endpoints are re-exported through `apps/api/src/endpoints/index.ts` (cast to `any` for Chanfana compatibility) and registered as Hono routes in `AccessBridgeWorker`.
 
 ### API endpoints (48 total routes registered)
 
@@ -85,15 +111,15 @@ Counts reflect routes registered in `AccessBridgeWorker` — note several admin-
 
 ### Internal service-to-service calls
 
-The worker calls itself via the `SELF` service binding. These internal requests are signed with HMAC-SHA256 using the `INTERNAL_HMAC_SECRET` secret (`src/utils/helpers/InternalRequestHelper.ts`, `src/middleware/HMACHandler.ts`). Requests with `X-Internal-*` headers or originating from the self-worker hostname are validated by the HMAC middleware; external requests pass through without HMAC checks.
+The worker calls itself via the `SELF` service binding. These internal requests are signed with HMAC-SHA256 using the `INTERNAL_HMAC_SECRET` secret (`apps/api/src/utils/helpers/InternalRequestHelper.ts`, `apps/api/src/middleware/HMACHandler.ts`). Requests with `X-Internal-*` headers or originating from the self-worker hostname are validated by the HMAC middleware; external requests pass through without HMAC checks.
 
 ### Credential chain and caching
 
-Credentials are stored encrypted (AES-GCM, key from `AES_ENCRYPTION_KEY_SECRET`) in D1. The system supports multi-hop role assumption chains: a base IAM user credential assumes an intermediate role, which then assumes the target role (up to `PRINCIPAL_TRUST_CHAIN_LIMIT` hops). `CredentialCacheRefreshTask` (`src/scheduled/`) runs through `CronTasksWorker` on a cron schedule (every 10 minutes) to pre-cache assumed credentials in KV.
+Credentials are stored encrypted (AES-GCM, key from `AES_ENCRYPTION_KEY_SECRET`) in D1. The system supports multi-hop role assumption chains: a base IAM user credential assumes an intermediate role, which then assumes the target role (up to `PRINCIPAL_TRUST_CHAIN_LIMIT` hops). `CredentialCacheRefreshTask` (`apps/api/src/scheduled/`) runs through `CronTasksWorker` on a cron schedule (every 10 minutes) to pre-cache assumed credentials in KV.
 
 ### Audit logging
 
-Every API request is automatically logged via the `IActivityAPIRoute` base class. The `handle()` method has a `finally` block that uses `c.executionCtx.waitUntil()` to write audit logs asynchronously. A path-to-action map in `src/constants/AuditActions.ts` translates HTTP method+path to semantic action names (e.g., `ASSUME_ROLE`, `GRANT_ACCESS`). The `AuditLogCleanupTask` deletes entries older than `AUDIT_LOG_RETENTION_DAYS` (default 90).
+Every API request is automatically logged via the `IActivityAPIRoute` base class. The `handle()` method has a `finally` block that uses `c.executionCtx.waitUntil()` to write audit logs asynchronously. A path-to-action map in `apps/api/src/constants/AuditActions.ts` translates HTTP method+path to semantic action names (e.g., `ASSUME_ROLE`, `GRANT_ACCESS`). The `AuditLogCleanupTask` deletes entries older than `AUDIT_LOG_RETENTION_DAYS` (default 90).
 
 ### Cost analytics
 
@@ -118,61 +144,70 @@ All run sequentially on the same cron trigger (`*/10 * * * *`) inside the single
 
 ### Data access layer
 
-All D1 queries go through DAO classes in `src/dao/` (18 concrete DAOs + `IKeyValueDAO` interface). KV access for credential caching uses `CredentialsCacheDAO` (implements `IKeyValueDAO`). New DAOs beyond the core set include `SpendAlertDAO`, `DataCollectionConfigDAO`, `ResourceInventoryDAO`, `AuditLogDAO`, `CostDataDAO`, `TeamsDAO`, `TeamMembersDAO`, `TeamAccountsDAO`.
+All D1 queries go through DAO classes in `apps/api/src/dao/` (18 concrete DAOs + `IKeyValueDAO` interface). KV access for credential caching uses `CredentialsCacheDAO` (implements `IKeyValueDAO`). New DAOs beyond the core set include `SpendAlertDAO`, `DataCollectionConfigDAO`, `ResourceInventoryDAO`, `AuditLogDAO`, `CostDataDAO`, `TeamsDAO`, `TeamMembersDAO`, `TeamAccountsDAO`.
+
+### Shared package
+
+`packages/shared/` contains code shared between frontend and backend:
+
+- `packages/shared/src/schema/` — Zod input/output schemas for API validation
+- `packages/shared/src/types.ts` — Shared TypeScript interfaces
+- `packages/shared/src/utils.ts` — Shared utility functions (ARN building, env export)
+
+Backend imports schemas via `@aws-access-bridge/shared`. Frontend uses types directly from `packages/shared/src/types.ts`.
 
 ### Constants organization
 
-`src/constants/` contains both top-level files and three topical subdirectories:
+`apps/api/src/constants/` contains both top-level files and three topical subdirectories:
 
 - Top-level: `AuditActions.ts`, `ConfigurationDefaults.ts`, `Configurations.ts`, `DemoMode.ts`, `Headers.ts`, `Hostnames.ts`, `RoleSessionNames.ts`
-- `src/constants/d1/` — D1 session constraint constants
-- `src/constants/error/` — Error message constants (e.g., for AssumeRoleUtil, HMACHandler)
-- `src/constants/kv/` — KV namespace names, TTLs, value type markers
+- `apps/api/src/constants/d1/` — D1 session constraint constants
+- `apps/api/src/constants/error/` — Error message constants (e.g., for AssumeRoleUtil, HMACHandler)
+- `apps/api/src/constants/kv/` — KV namespace names, TTLs, value type markers
 
 ### Path aliases
 
-- Backend: `@/*` maps to `./src/*` (see `tsconfig.backend.json`)
-- Frontend (Vite SPA): `@/components/*` maps to `./components/*` (see `vite.config.ts`)
-- Frontend (Next.js): Both `@/*` → `./src/*` and `@/components/*` → `./components/*` (see `tsconfig.json`)
+- Backend (`apps/api`): `@/*` maps to `./apps/api/src/*` (see `apps/api/tsconfig.json`)
+- Frontend (`apps/web`): Relative imports within `apps/web/src/` and `apps/web/src/components/`
 
-Always use `@/` imports for backend source.
+Always use `@/` imports for backend source code.
 
 ### Frontend
 
-Shared React components live in `components/` at the project root. All interactive components use the `'use client'` directive (needed for Next.js compatibility). The Vite SPA entry point is `app/SpaApp.tsx` which provides pathname-based client-side view switching.
+React components live in `apps/web/src/components/`. All interactive components use the `'use client'` directive. The Vite SPA entry point is `apps/web/src/SpaApp.tsx` which provides pathname-based client-side view switching.
 
 Key components:
 
-- `components/HomePage.tsx` — Landing / empty-state page
-- `components/Navbar.tsx` — Top navigation shared across views
-- `components/AccountList.tsx` — Main account list with role assumption and favorites
-- `components/AccessKeyModal.tsx` — Displays generated AWS access keys
-- `components/AdminPage.tsx` / `components/AdminPageView.tsx` — Tabbed admin interface organized as a grouped left sidebar:
+- `apps/web/src/components/HomePage.tsx` — Landing / empty-state page
+- `apps/web/src/components/Navbar.tsx` — Top navigation shared across views
+- `apps/web/src/components/AccountList.tsx` — Main account list with role assumption and favorites
+- `apps/web/src/components/AccessKeyModal.tsx` — Displays generated AWS access keys
+- `apps/web/src/components/AdminPage.tsx` — Tabbed admin interface organized as a grouped left sidebar:
   - **SETUP**: Setup Wizard
   - **CONFIGURATION**: Credentials, Account Nicknames, Role Config
   - **ACCESS**: User Access, Teams
   - **MONITORING**: Spend Alerts, Data Collection
   - **SYSTEM**: Audit Logs, Maintenance
-- `components/OnboardingWizard.tsx` — Guided admin account setup
-- `components/CostDashboard.tsx` / `components/CostDashboardView.tsx` — Cost summary cards, trend bar chart, account breakdown
-- `components/ResourceInventory.tsx` / `components/ResourceInventoryView.tsx` — Resource summary, type/search filters, paginated table
-- `components/AuditLogsTab.tsx` — Filterable, paginated audit log viewer
-- `components/TeamsTab.tsx` — Team management (create/rename/delete, members, accounts)
-- `components/Unauthorized.tsx` — Unauthorized access screen
-- `components/types.ts` / `components/utils.ts` — Shared types and helpers
+- `apps/web/src/components/OnboardingWizard.tsx` — Guided admin account setup
+- `apps/web/src/components/CostDashboard.tsx` — Cost summary cards, trend bar chart, account breakdown
+- `apps/web/src/components/ResourceInventory.tsx` — Resource summary, type/search filters, paginated table
+- `apps/web/src/components/AuditLogsTab.tsx` — Filterable, paginated audit log viewer
+- `apps/web/src/components/TeamsTab.tsx` — Team management (create/rename/delete, members, accounts)
+- `apps/web/src/components/Unauthorized.tsx` — Unauthorized access screen
 
 ### TypeScript configuration
 
-Two separate tsconfig files to avoid type conflicts between Cloudflare Workers types and DOM types:
+Each package has its own `tsconfig.json`:
 
-- `tsconfig.json` — Frontend (includes `dom` lib, Next.js plugin, `@cloudflare/workers-types`). Covers `app/`, `components/`, and `src/` (for route handler imports).
-- `tsconfig.backend.json` — Backend only (no `dom` lib, `worker-configuration.d.ts` types). Covers `src/` only.
+- `apps/web/tsconfig.json` — Frontend (includes `dom` lib, Vite/client types)
+- `apps/api/tsconfig.json` — Backend (no `dom` lib, `worker-configuration.d.ts` types)
+- `packages/shared/tsconfig.json` — Shared schemas only
 
-The `npm run tsc` command checks both configs.
+The `pnpm typecheck` command runs type-checking on all packages.
 
 ### Tests
 
-Vitest (`vitest.config.ts`) runs ~30 test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (1 — HMAC handler), `test/model/` (1), `test/utils/` (9 util tests), `test/workers/` (1).
+Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (1 — HMAC handler), `test/model/` (1), `test/utils/` (9 util tests), `test/workers/` (1).
 
 ## Code Style
 
@@ -192,7 +227,7 @@ Vitest (`vitest.config.ts`) runs ~30 test files under `test/`, organized by area
 - Durable Object: `CRON_TASKS` → `CronTasksWorker` (singleton name `cron-tasks`)
 - Service: `SELF` → `aws-access-bridge` (for internal HMAC-signed self-calls)
 - Secrets Store: `AES_ENCRYPTION_KEY_SECRET` (credential encryption), `INTERNAL_HMAC_SECRET` (internal request signing)
-- Assets: `./app/dist/` (Vite SPA output)
+- Assets: `./apps/web/dist/` (Vite SPA output)
 - Cron: `*/10 * * * *`
 - Compatibility date: `2025-11-29`
 
@@ -206,9 +241,7 @@ Vitest (`vitest.config.ts`) runs ~30 test files under `test/`, organized by area
 
 ## CI/CD
 
-Deployment runs via GitHub Actions (`.github/workflows/deploy-cloudflare-worker.yml`) on Node 24. It only runs on forks (not the source repo). The workflow: checkout → install → dump `wrangler.jsonc` from GitHub vars → validate config `$minimumVersion` → init Cloudflare Secrets Store (`scripts/init-secrets.ts`) → apply D1 migrations → build frontend (Vite SPA) → hide OpenNext config files → wrangler deploy.
-
-The OpenNext config files (`open-next.config.ts`, `next.config.ts`) are temporarily hidden during deploy so wrangler doesn't delegate to `opennextjs-cloudflare` (which OOMs on the GitHub Actions runner).
+Deployment runs via GitHub Actions (`.github/workflows/deploy-cloudflare-worker.yml`) on Node 24 with pnpm. The workflow: checkout → install pnpm → dump `wrangler.jsonc` from GitHub vars → validate config `$minimumVersion` → init Cloudflare Secrets Store (`scripts/init-secrets.ts`) → apply D1 migrations → build web app → build API worker → wrangler deploy.
 
 ## Database
 
