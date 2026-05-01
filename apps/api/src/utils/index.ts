@@ -12,4 +12,6 @@ export { TimestampUtil } from './TimestampUtil';
 export { UUIDUtil } from './UUIDUtil';
 export { AwsApiUtil } from './AwsApiUtil';
 
+export { HTTPException } from 'hono/http-exception';
+
 export { InternalRequestHelper } from './helpers/InternalRequestHelper';

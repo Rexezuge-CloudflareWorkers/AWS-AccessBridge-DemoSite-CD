@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ErrorTranslationUtil } from '@/utils/ErrorTranslationUtil';
 import { BadRequestError, UnauthorizedError, ForbiddenError, InternalServerError } from '@/error';
-import { HTTPException } from 'hono/http-exception';
+import { HTTPException } from '@/utils';
 
 describe('ErrorTranslationUtil', () => {
   describe('toHTTPException', () => {
