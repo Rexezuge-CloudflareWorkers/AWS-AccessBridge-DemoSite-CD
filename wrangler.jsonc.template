@@ -1,6 +1,6 @@
 {
-  // "$version": 1777563301,
-  // "$minimumVersion": 1777563301,
+  // "$version": 1777605456,
+  // "$minimumVersion": 1777605456,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aws-access-bridge",
   "main": "apps/api/src/index.ts",
