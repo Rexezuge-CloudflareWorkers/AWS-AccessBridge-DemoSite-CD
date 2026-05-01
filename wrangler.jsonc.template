@@ -3,7 +3,7 @@
   // "$minimumVersion": 1777563301,
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aws-access-bridge",
-  "main": "src/index.ts",
+  "main": "apps/api/src/index.ts",
   "compatibility_date": "2025-11-29",
   "compatibility_flags": [],
   "preview_urls": false,
@@ -25,6 +25,9 @@
   "routes": [],
   "placement": {
     "mode": "off",
+  },
+  "assets": {
+    "directory": "./apps/web/dist/",
   },
   "durable_objects": {
     "bindings": [
