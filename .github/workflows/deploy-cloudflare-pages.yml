@@ -42,14 +42,14 @@ jobs:
             echo "CLOUDFLARE_PAGES_PROJECT_NAME repository variable is required"
             exit 1
           fi
-          cp wrangler-pages.jsonc.template wrangler.jsonc
+          cp apps/web/wrangler.template.jsonc wrangler.jsonc
         env:
           CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
 
       - name: Deploy with Wrangler Pages
         if: ${{ github.event_name != 'pull_request' }}
         run: |
-          npx wrangler pages deploy \
+          pnpm exec wrangler pages deploy \
             --project-name "${CLOUDFLARE_PAGES_PROJECT_NAME}" \
             --branch "${GITHUB_REF_NAME}" \
             --commit-hash "${GITHUB_SHA}" \
