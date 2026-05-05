@@ -6,7 +6,22 @@ This file provides guidance to LLM agents when working with code in this reposit
 
 AWS AccessBridge is a Cloudflare Worker that provides a web-based AWS role assumption bridge. It lets users assume AWS roles across multiple accounts and generate temporary AWS Console URLs. Authentication is handled by Cloudflare Zero Trust.
 
-**Stack:** Hono + Chanfana (OpenAPI) backend on Cloudflare Workers, Durable Objects for cron task execution, React 19 + Tailwind CSS v4 frontend (Vite SPA), Cloudflare D1 database (26 migrations), Cloudflare KV for credential caching, Cloudflare Secrets Store for encryption keys and internal HMAC secret.
+**Stack:** Hono + Chanfana (OpenAPI) backend on Cloudflare Workers, Durable Objects for cron task execution, React 19 + Tailwind CSS v4 frontend (Vite SPA), Cloudflare D1 database (26 migrations), Cloudflare KV for credential caching, Cloudflare Secrets Store for encryption keys and internal HMAC secret. The API Worker and Pages-style web deployment each have their own Wrangler template (`apps/api/wrangler.template.jsonc`, `apps/web/wrangler.template.jsonc`).
+
+## Cloudflare Documentation Policy
+
+Cloudflare Workers APIs, platform limits, and product behavior change over time. Before doing any task that depends on Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, Workers AI, or the Agents SDK, retrieve the current official Cloudflare documentation instead of relying on memory.
+
+Official references:
+
+- Workers docs: https://developers.cloudflare.com/workers/
+- Cloudflare docs MCP: https://docs.mcp.cloudflare.com/mcp
+- Node.js compatibility: https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+- Workers errors: https://developers.cloudflare.com/workers/observability/errors/
+- Durable Objects best practices: https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/
+- Workflows best practices, if Workflows are introduced: https://developers.cloudflare.com/workflows/build/rules-of-workflows/
+
+For limits and quotas, retrieve the relevant product `/platform/limits/` page, for example `https://developers.cloudflare.com/workers/platform/limits/`. For product APIs and limits, use the official docs under `/kv/`, `/r2/`, `/d1/`, `/durable-objects/`, `/queues/`, `/vectorize/`, `/workers-ai/`, and `/agents/` as applicable. For Cloudflare Error 1102 (CPU or memory exceeded), check the current Workers platform limits page.
 
 ## Commands
 
@@ -16,7 +31,7 @@ pnpm install              # Installs all workspace dependencies
 
 # Development
 pnpm dev                 # Vite dev server for frontend SPA
-pnpm --filter @aws-access-bridge/api dev   # Run API worker locally (uses wrangler dev)
+pnpm exec wrangler dev -c apps/api/wrangler.template.jsonc   # Run API worker locally from the template config
 
 # Build
 pnpm build               # Build all packages (web then api)
@@ -32,13 +47,22 @@ pnpm typecheck           # Type-check all packages
 pnpm test                # Run vitest tests
 
 # Cloudflare
-pnpm exec wrangler dev   # Local Cloudflare dev server
+pnpm exec wrangler dev          # Local Cloudflare dev server
+pnpm exec wrangler deploy       # Deploy to Cloudflare
 pnpm exec wrangler deploy --dry-run  # Dry-run deploy
+pnpm exec wrangler types --env-interface CloudflareEnv ./apps/api/cloudflare-env.d.ts  # Regenerate Worker binding types
+
+# Official Cloudflare command equivalents when not using pnpm
+npx wrangler dev
+npx wrangler deploy
+npx wrangler types
 
 # Database
 pnpm exec wrangler d1 migrations apply --remote aws-access-bridge-db    # Apply migrations to remote D1
 pnpm exec wrangler d1 migrations apply --local aws-access-bridge-db     # Apply migrations locally
 ```
+
+Run `wrangler types` after changing bindings in the Wrangler config. The root `cf-typegen` script currently writes to `./cloudflare-env.d.ts`; the checked-in API binding type file is `apps/api/cloudflare-env.d.ts`, so prefer the explicit command above unless the script is updated.
 
 ## Mono-repo Structure
 
@@ -50,7 +74,7 @@ aws-access-bridge/
 │   │   │   ├── SpaApp.tsx      # SPA entry point
 │   │   │   ├── main.tsx
 │   │   │   └── components/    # React components
-│   │   ├── dist/               # Build output
+│   │   ├── dist/               # Build output, used by Worker assets and Pages output
 │   │   └── package.json
 │   └── api/                    # Cloudflare Worker (backend)
 │       ├── src/
@@ -62,7 +86,7 @@ aws-access-bridge/
 │       │   ├── middleware/      # HMAC, auth, audit
 │       │   ├── scheduled/       # Cron task handlers
 │       │   ├── schema/          # Zod schemas (re-exports from shared)
-│       │   └── generated/      # SPA shell (auto-generated at build)
+│       │   └── generated/      # SPA shell (auto-generated at build, stubbed after install)
 │       └── package.json
 ├── packages/
 │   └── shared/                 # Shared types, schemas, utilities
@@ -72,6 +96,7 @@ aws-access-bridge/
 │       │   └── utils.ts
 │       └── package.json
 ├── migrations/                  # D1 migrations
+├── functions/                   # Cloudflare Pages Function proxy to the API Worker
 ├── test/                       # Vitest tests
 └── scripts/                    # Build/deploy scripts
 ```
@@ -80,9 +105,11 @@ aws-access-bridge/
 
 ### Entry point and request flow
 
-`apps/api/src/index.ts` instantiates `AccessBridgeWorker` (`apps/api/src/workers/AccessBridgeWorker.ts`) which extends `AbstractWorker` (`apps/api/src/base/`). AbstractWorker handles both `fetch` (HTTP) and `scheduled` (cron) events. The `/__scheduled` path triggers the scheduled handler via HTTP for testing. Cron execution is delegated to the singleton `CronTasksWorker` Durable Object via the `CRON_TASKS` binding, so the AccessBridge worker only performs the trigger handoff.
+`apps/api/src/index.ts` exports a default `AccessBridgeWorker` instance and the `CronTasksWorker` class for the Cloudflare runtime. `AccessBridgeWorker` (`apps/api/src/workers/AccessBridgeWorker.ts`) extends `AbstractEntrypointWorker` (`apps/api/src/base/`) and handles both `fetch` (HTTP) and `scheduled` (cron) events. Cron execution is delegated to the singleton `CronTasksWorker` Durable Object via the `CRON_TASKS` binding, so the AccessBridge worker only performs the trigger handoff.
 
-The frontend SPA is built to `apps/web/dist/` by Vite. The HTML shell is embedded into the Worker bundle at build time via a custom Vite plugin that emits `apps/api/src/generated/spa-shell.ts` (`SPA_HTML`). A catch-all `app.get('*')` handler serves this HTML for any non-API, non-docs, non-asset path, giving the SPA robust deep-linking support without relying on the `ASSETS` binding for HTML routing. Static assets from `apps/web/dist/` are served by Cloudflare's asset binding. A `postinstall` script writes a placeholder stub so type-checks pass before the first build.
+The frontend SPA is built to `apps/web/dist/` by Vite. The HTML shell is embedded into the Worker bundle at build time via a custom Vite plugin that emits `apps/api/src/generated/spa-shell.ts` (`SPA_HTML`). A catch-all `app.get('*')` handler can serve this HTML for non-API, non-docs, non-asset paths when `SERVE_SPA_FROM_WORKER=true`; the template default is `false`, allowing the separate web/Pages deployment to serve the SPA. Static assets from `apps/web/dist/` are also configured as Worker assets in the API template. A `postinstall` script writes a placeholder stub so type-checks pass before the first build.
+
+Cloudflare Pages uses `functions/[[path]].ts` as a catch-all Pages Function. It proxies requests to the API Worker through the `API_WORKER` service binding and preserves forwarding headers (`X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Forwarded-Uri`, and `X-Forwarded-For`) for origin-aware URL handling.
 
 ### Endpoint pattern
 
@@ -158,9 +185,10 @@ Backend imports schemas via `@aws-access-bridge/shared`. Frontend uses types dir
 
 ### Constants organization
 
-`apps/api/src/constants/` contains both top-level files and three topical subdirectories:
+`apps/api/src/constants/` contains both top-level files and four topical subdirectories:
 
 - Top-level: `AuditActions.ts`, `ConfigurationDefaults.ts`, `Configurations.ts`, `DemoMode.ts`, `Headers.ts`, `Hostnames.ts`, `RoleSessionNames.ts`
+- `apps/api/src/constants/do/` — Durable Object namespace names and internal run URL constants
 - `apps/api/src/constants/d1/` — D1 session constraint constants
 - `apps/api/src/constants/error/` — Error message constants (e.g., for AssumeRoleUtil, HMACHandler)
 - `apps/api/src/constants/kv/` — KV namespace names, TTLs, value type markers
@@ -190,7 +218,9 @@ Key components:
   - **SYSTEM**: Audit Logs, Maintenance
 - `apps/web/src/components/OnboardingWizard.tsx` — Guided admin account setup
 - `apps/web/src/components/CostDashboard.tsx` — Cost summary cards, trend bar chart, account breakdown
+- `apps/web/src/components/CostDashboardView.tsx` — Page-level cost dashboard view wrapper
 - `apps/web/src/components/ResourceInventory.tsx` — Resource summary, type/search filters, paginated table
+- `apps/web/src/components/ResourceInventoryView.tsx` — Page-level resource inventory view wrapper
 - `apps/web/src/components/AuditLogsTab.tsx` — Filterable, paginated audit log viewer
 - `apps/web/src/components/TeamsTab.tsx` — Team management (create/rename/delete, members, accounts)
 - `apps/web/src/components/Unauthorized.tsx` — Unauthorized access screen
@@ -200,14 +230,14 @@ Key components:
 Each package has its own `tsconfig.json`:
 
 - `apps/web/tsconfig.json` — Frontend (includes `dom` lib, Vite/client types)
-- `apps/api/tsconfig.json` — Backend (no `dom` lib, `worker-configuration.d.ts` types)
+- `apps/api/tsconfig.json` — Backend (no `dom` lib, `apps/api/cloudflare-env.d.ts` binding types)
 - `packages/shared/tsconfig.json` — Shared schemas only
 
 The `pnpm typecheck` command runs type-checking on all packages.
 
 ### Tests
 
-Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (1 — HMAC handler), `test/model/` (1), `test/utils/` (9 util tests), `test/workers/` (1).
+Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `test/constants/` (1), `test/crypto/` (2 — AES-GCM + HMAC), `test/dao/` (14 DAO tests), `test/error/` (1), `test/middleware/` (2 — HMAC and middleware composition), `test/model/` (1), `test/schema/` (1), `test/utils/` (10 util tests), `test/workers/` (2 — AccessBridgeWorker and CronTasksWorker).
 
 ## Code Style
 
@@ -218,7 +248,7 @@ Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `t
 
 ## Configuration
 
-`wrangler.jsonc` contains the worker config (D1 binding, KV binding, Durable Object binding, secrets store, service binding, vars, cron triggers). It is gitignored. A `wrangler.jsonc.template` is the public version with placeholder IDs. The template has `$version` and `$minimumVersion` fields (commented); CI validates that fork configs are not outdated against `$minimumVersion`.
+Cloudflare config is split by deploy target. Local/private `wrangler.jsonc` files are gitignored when present. `apps/api/wrangler.template.jsonc` is the public API Worker template with placeholder IDs. `apps/web/wrangler.template.jsonc` is the public web/Pages template with `pages_build_output_dir: "apps/web/dist/"` and an `API_WORKER` service binding to `aws-access-bridge`. The API template has `$version` and `$minimumVersion` fields (commented); CI validates that fork configs are not outdated against `$minimumVersion`.
 
 **Bindings (from template):**
 
@@ -230,6 +260,7 @@ Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `t
 - Assets: `./apps/web/dist/` (Vite SPA output)
 - Cron: `*/10 * * * *`
 - Compatibility date: `2025-11-29`
+- Observability logs enabled; traces disabled by default
 
 **Environment variables** (in `vars`):
 
@@ -238,10 +269,13 @@ Vitest (`vitest.config.ts`) runs test files under `test/`, organized by area: `t
 - `PRINCIPAL_TRUST_CHAIN_LIMIT` — Max credential chain depth
 - `AUDIT_LOG_RETENTION_DAYS` — Audit log retention (default 90)
 - `DEMO_MODE` — When `"true"`, all admin write operations throw `MethodNotAllowedError` at the base-class level
+- `SERVE_SPA_FROM_WORKER` — When `"true"`, the API Worker serves embedded SPA HTML for frontend routes. Template default is `"false"`.
 
 ## CI/CD
 
-Deployment runs via GitHub Actions (`.github/workflows/deploy-cloudflare-worker.yml`) on Node 24 with pnpm. The workflow: checkout → install pnpm → dump `wrangler.jsonc` from GitHub vars → validate config `$minimumVersion` → init Cloudflare Secrets Store (`scripts/init-secrets.ts`) → apply D1 migrations → build web app → build API worker → wrangler deploy.
+Deployment runs via GitHub Actions on Node 24 with pnpm. `.github/workflows/deploy-cloudflare-worker.yml` deploys the API Worker: checkout → install pnpm → materialize `wrangler.jsonc` from the `WRANGLER_JSONC` GitHub variable → validate config `$minimumVersion` against `apps/api/wrangler.template.jsonc` → init Cloudflare Secrets Store (`scripts/init-secrets.ts`) → apply D1 migrations → build web app → type-check/build API worker → `wrangler deploy --dry-run` → `wrangler deploy` outside pull requests.
+
+`.github/workflows/deploy-cloudflare-pages.yml` deploys the frontend to Cloudflare Pages: checkout → install pnpm → build web app → copy `apps/web/wrangler.template.jsonc` to `wrangler.jsonc` → `wrangler pages deploy` using `CLOUDFLARE_PAGES_PROJECT_NAME`. Pull requests build but do not deploy.
 
 ## Database
 
