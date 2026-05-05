@@ -197,6 +197,47 @@ class AwsApiUtil {
     return items;
   }
 
+  public static async listTables(accessKeys: AccessKeys, region: string = 'us-east-1'): Promise<ResourceDiscoveryItem[]> {
+    const client: AwsClient = new AwsClient({
+      service: 'dynamodb',
+      region,
+      accessKeyId: accessKeys.accessKeyId,
+      secretAccessKey: accessKeys.secretAccessKey,
+      sessionToken: accessKeys.sessionToken,
+    });
+
+    const response: Response = await client.fetch(`https://dynamodb.${region}.amazonaws.com/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': 'DynamoDB_20120810.ListTables',
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      console.error(`DynamoDB ListTables failed: ${response.status}`);
+      return [];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const data: any = await response.json();
+    const items: ResourceDiscoveryItem[] = [];
+
+    for (const tableName of data.TableNames || []) {
+      items.push({
+        resourceType: 'dynamodb',
+        resourceId: `${region}:${tableName}`,
+        resourceName: tableName,
+        state: 'active',
+        region,
+        metadata: {},
+      });
+    }
+
+    return items;
+  }
+
   public static async describeDBInstances(accessKeys: AccessKeys, region: string = 'us-east-1'): Promise<ResourceDiscoveryItem[]> {
     const client: AwsClient = new AwsClient({
       service: 'rds',

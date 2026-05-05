@@ -70,6 +70,11 @@ class ResourceInventoryCollectionTask extends IScheduledTask<ResourceInventoryCo
         } catch (e) {
           console.warn('RDS collection failed:', e);
         }
+        try {
+          allItems.push(...(await AwsApiUtil.listTables(credential)));
+        } catch (e) {
+          console.warn('DynamoDB collection failed:', e);
+        }
 
         for (const item of allItems) {
           const resource: ResourceInventoryItem = {
@@ -86,7 +91,7 @@ class ResourceInventoryCollectionTask extends IScheduledTask<ResourceInventoryCo
         }
 
         // Clean stale resources
-        for (const type of ['ec2', 's3', 'lambda', 'rds']) {
+        for (const type of ['ec2', 's3', 'lambda', 'rds', 'dynamodb']) {
           await resourceDAO.deleteStaleResources(accountId, type, collectedAt);
         }
 
