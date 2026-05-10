@@ -282,6 +282,40 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
     setManualRoleName('');
   };
 
+  const handleSaveRoleRelationships = async (): Promise<boolean> => {
+    if (selectedRoles.size === 0) return true;
+
+    const assumedByArn = roleForDiscovery || principalArn;
+    if (!assumedByArn) return true;
+
+    setIsLoading(true);
+    let failures = 0;
+    for (const roleName of selectedRoles) {
+      const role = discoveredRoles.find((r) => r.roleName === roleName);
+      if (!role || !role.arn) continue;
+
+      const result = await apiCall('/api/admin/credentials/relationship', 'POST', {
+        principalArn: role.arn,
+        assumedBy: assumedByArn,
+      });
+      if (!result.ok) failures++;
+    }
+    setIsLoading(false);
+
+    if (failures > 0) {
+      showMessage('error', `${failures} role relationship(s) failed to save.`);
+      return false;
+    }
+    return true;
+  };
+
+  const handleStep4Next = async () => {
+    const saved = await handleSaveRoleRelationships();
+    if (saved) {
+      setStep(4);
+    }
+  };
+
   // Step 5 handlers
   const handleGrantAccess = async () => {
     const validEmails = userEmails.filter((e) => e.trim());
@@ -647,10 +681,10 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
                 Back
               </button>
               <button
-                onClick={() => setStep(4)}
-                disabled={selectedRoles.size === 0}
+                onClick={handleStep4Next}
+                disabled={selectedRoles.size === 0 || isLoading}
                 className="font-medium"
-                style={getBtnSuccess(selectedRoles.size === 0)}
+                style={getBtnSuccess(selectedRoles.size === 0 || isLoading)}
               >
                 Next
               </button>
