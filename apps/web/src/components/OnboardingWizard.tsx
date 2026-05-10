@@ -121,6 +121,8 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
   const [isLoading, setIsLoading] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [isStoring, setIsStoring] = useState(false);
+  const [isSettingChain, setIsSettingChain] = useState(false);
+  const [isTestingChain, setIsTestingChain] = useState(false);
 
   // Focus tracking for inputs
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
@@ -134,6 +136,13 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
       setValidationResult(null);
     }
   }, [accessKeyId, secretAccessKey, sessionToken]);
+
+  useEffect(() => {
+    if (chainConfigured) {
+      setChainConfigured(false);
+      setChainTestResult(null);
+    }
+  }, [intermediateRoleArn]);
 
   const apiCall = async (
     url: string,
@@ -231,7 +240,7 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
       showMessage('error', 'Intermediate Role ARN is required.');
       return;
     }
-    setIsLoading(true);
+    setIsSettingChain(true);
     const result = await apiCall('/api/admin/credentials/relationship', 'POST', {
       principalArn: intermediateRoleArn,
       assumedBy: principalArn,
@@ -243,11 +252,11 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
     } else {
       showMessage('error', result.error!);
     }
-    setIsLoading(false);
+    setIsSettingChain(false);
   };
 
   const handleTestChain = async () => {
-    setIsLoading(true);
+    setIsTestingChain(true);
     const roleArnToTest = roleForDiscovery || principalArn;
     const result = await apiCall('/api/admin/credentials/test-chain', 'POST', { principalArn: roleArnToTest });
     if (result.ok) {
@@ -258,7 +267,7 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
     } else {
       showMessage('error', result.error!);
     }
-    setIsLoading(false);
+    setIsTestingChain(false);
   };
 
   // Step 4 handlers
@@ -591,16 +600,22 @@ export default function OnboardingWizard({ showMessage }: OnboardingWizardProps)
               </div>
             )}
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {intermediateRoleArn.trim() && (
-                <button onClick={handleSetChain} disabled={isLoading} className="font-medium" style={getBtnPrimary(isLoading)}>
-                  {isLoading ? 'Setting...' : 'Set Chain'}
-                </button>
-              )}
-              {(chainConfigured || credentialStored) && (
-                <button onClick={handleTestChain} disabled={isLoading} className="font-medium" style={getBtnPrimary(isLoading)}>
-                  {isLoading ? 'Testing...' : 'Test Chain'}
-                </button>
-              )}
+              <button
+                onClick={handleSetChain}
+                disabled={isSettingChain || !intermediateRoleArn.trim()}
+                className="font-medium"
+                style={getBtnPrimary(isSettingChain || !intermediateRoleArn.trim())}
+              >
+                {isSettingChain ? 'Setting...' : 'Set Chain'}
+              </button>
+              <button
+                onClick={handleTestChain}
+                disabled={isTestingChain || !chainConfigured}
+                className="font-medium"
+                style={getBtnPrimary(isTestingChain || !chainConfigured)}
+              >
+                {isTestingChain ? 'Testing...' : 'Test Chain'}
+              </button>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '16px' }}>
               <button
