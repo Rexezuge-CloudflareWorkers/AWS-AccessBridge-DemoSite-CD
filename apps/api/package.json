@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@aws-access-bridge/shared": "workspace:*",
-    "@opennextjs/cloudflare": "^1.19.9",
+    "@opennextjs/cloudflare": "^1.19.10",
     "aws4fetch": "^1.0.0",
     "chanfana": "^3.3.0",
     "hono": "^4.12.19",
