@@ -8,15 +8,15 @@
   },
   "dependencies": {
     "@aws-access-bridge/shared": "workspace:*",
-    "@opennextjs/cloudflare": "^1.19.10",
-    "aws4fetch": "^1.0.0",
+    "@opennextjs/cloudflare": "^1.19.11",
+    "aws4fetch": "^1.0.20",
     "chanfana": "^3.3.0",
-    "hono": "^4.12.19",
-    "jose": "^6.2.0",
+    "hono": "^4.12.21",
+    "jose": "^6.2.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^25.0.0",
-    "typescript": "^6.0.0"
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3"
   }
 }

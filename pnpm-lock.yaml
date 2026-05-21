@@ -57,29 +57,29 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       '@opennextjs/cloudflare':
-        specifier: ^1.19.10
-        version: 1.19.10(next@16.2.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(wrangler@4.93.1)
+        specifier: ^1.19.11
+        version: 1.19.11(next@16.2.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(wrangler@4.93.1)
       aws4fetch:
-        specifier: ^1.0.0
+        specifier: ^1.0.20
         version: 1.0.20
       chanfana:
         specifier: ^3.3.0
         version: 3.3.0
       hono:
-        specifier: ^4.12.19
-        version: 4.12.19
+        specifier: ^4.12.21
+        version: 4.12.21
       jose:
-        specifier: ^6.2.0
+        specifier: ^6.2.3
         version: 6.2.3
       zod:
         specifier: ^4.4.3
         version: 4.4.3
     devDependencies:
       '@types/node':
-        specifier: ^25.0.0
-        version: 25.6.0
+        specifier: ^25.9.1
+        version: 25.9.1
       typescript:
-        specifier: ^6.0.0
+        specifier: ^6.0.3
         version: 6.0.3
 
   apps/web:
@@ -1242,8 +1242,8 @@ packages:
     peerDependencies:
       next: '>=15.5.18 <16 || >=16.2.6'
 
-  '@opennextjs/cloudflare@1.19.10':
-    resolution: {integrity: sha512-rTVugmBI2q9PCc/XV7qQlCNFL1cCfhLvaOeyPu/TU8z4K1VcsDMVHDlABYeRB2kGmH7RnFNFeQAK+1YdQWk7tA==}
+  '@opennextjs/cloudflare@1.19.11':
+    resolution: {integrity: sha512-spZ7YsZZW9q/OJStaZlJhuklYKei5e2tNQ7PMi3DDSJ7x7167m7EYYHQZfVN5gwJBDkMR2jUDW88oHjnGz4YYw==}
     hasBin: true
     peerDependencies:
       next: '>=15.5.18 <16 || >=16.2.6'
@@ -2284,8 +2284,8 @@ packages:
     resolution: {integrity: sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg==}
     engines: {node: '>= 0.4'}
 
-  hono@4.12.19:
-    resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
+  hono@4.12.21:
+    resolution: {integrity: sha512-uV63apnb0kyPtAUwoWgaGh9HyIFcv8lgmzPZSiTBQAFOFGIzka5EZ1dZocmGnn0XdX0+XTqJ6Tqv7selMuGLRQ==}
     engines: {node: '>=16.9.0'}
 
   http-errors@2.0.1:
@@ -4300,7 +4300,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.19.10(next@16.2.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(wrangler@4.93.1)':
+  '@opennextjs/cloudflare@1.19.11(next@16.2.4(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(wrangler@4.93.1)':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
@@ -5446,7 +5446,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.19: {}
+  hono@4.12.21: {}
 
   http-errors@2.0.1:
     dependencies:
