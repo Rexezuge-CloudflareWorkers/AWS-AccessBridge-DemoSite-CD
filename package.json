@@ -13,20 +13,20 @@
     "typegen": "wrangler types --config ./apps/api/wrangler.template.jsonc --env-interface CloudflareEnv"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "eslint": "^10.3.0",
-    "eslint-config-prettier": "^10.1.0",
-    "eslint-plugin-prettier": "^5.5.0",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^10.4.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
     "globals": "^17.6.0",
-    "jsonc-parser": "^3.3.0",
-    "prettier": "^3.8.0",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.0",
+    "jsonc-parser": "^3.3.1",
+    "prettier": "^3.8.3",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
-    "vitest": "^4.1.0",
-    "wrangler": "^4.92.0"
+    "vitest": "^4.1.7",
+    "wrangler": "^4.93.1"
   },
-  "packageManager": "pnpm@10.12.4"
+  "packageManager": "pnpm@11.2.2"
 }
