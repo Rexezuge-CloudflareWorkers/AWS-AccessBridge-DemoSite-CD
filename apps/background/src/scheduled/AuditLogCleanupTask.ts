@@ -1,8 +1,8 @@
-import { AuditLogDAO } from '@/dao/AuditLogDAO';
-import { TimestampUtil } from '@/utils';
+import { AuditLogDAO } from '@aws-access-bridge/backend-core/dao/AuditLogDAO';
+import { TimestampUtil } from '@aws-access-bridge/backend-core/utils';
 import { IScheduledTask } from './IScheduledTask';
 import type { IEnv } from './IScheduledTask';
-import { DEFAULT_AUDIT_LOG_RETENTION_DAYS } from '@/constants';
+import { DEFAULT_AUDIT_LOG_RETENTION_DAYS } from '@aws-access-bridge/backend-core/constants';
 
 class AuditLogCleanupTask extends IScheduledTask<AuditLogCleanupTaskEnv> {
   protected async handleScheduledTask(_event: ScheduledController, env: AuditLogCleanupTaskEnv, _ctx: ExecutionContext): Promise<void> {

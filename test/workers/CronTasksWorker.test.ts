@@ -28,7 +28,7 @@ vi.mock('@/scheduled', () => {
   };
 });
 
-import { CronTasksWorker } from '@/workers/CronTasksWorker';
+import { CronTasksWorker } from '@aws-access-bridge/background/CronTasksWorker';
 
 function createDurableObjectState(): DurableObjectState {
   return {

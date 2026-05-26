@@ -1,4 +1,4 @@
-import { AbstractDurableObjectWorker } from '@/base';
+import { AbstractDurableObjectWorker } from '@aws-access-bridge/backend-core/base';
 import { AuditLogCleanupTask, CostDataCollectionTask, CredentialCacheRefreshTask, ResourceInventoryCollectionTask } from '@/scheduled';
 
 const CRON_TASKS_RUN_PATH: string = '/run';

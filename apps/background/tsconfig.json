@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2021",
     "lib": ["ES2021"],
-    "jsx": "react-jsx",
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
@@ -29,11 +28,9 @@
       "@/model/*": ["../../packages/backend-core/src/model/*"],
       "@/utils": ["../../packages/backend-core/src/utils/index.ts"],
       "@/utils/*": ["../../packages/backend-core/src/utils/*"],
-      "@/scheduled": ["../background/src/scheduled/index.ts"],
-      "@/scheduled/*": ["../background/src/scheduled/*"],
       "@/*": ["./src/*"]
     }
   },
   "include": ["../../worker-configuration.d.ts", "src/**/*.ts"],
-  "exclude": ["test", "node_modules"]
+  "exclude": ["node_modules"]
 }

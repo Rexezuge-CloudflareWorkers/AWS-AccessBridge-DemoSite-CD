@@ -5,7 +5,7 @@ abstract class AbstractEntrypointWorker {
     return execId;
   }
 
-  public async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  public async fetch(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response> {
     const url: URL = new URL(request.url);
     if ('/__scheduled' === url.pathname) {
       await this.scheduled(
@@ -30,7 +30,7 @@ abstract class AbstractEntrypointWorker {
     }
   }
 
-  public async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  public async scheduled(event: ScheduledController, env: CloudflareEnv, ctx: ExecutionContext): Promise<void> {
     this.printExecId();
     console.log('⏭️ Worker triggered by Cron schedule');
     try {
@@ -40,9 +40,9 @@ abstract class AbstractEntrypointWorker {
     }
   }
 
-  protected abstract onRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response>;
+  protected abstract onRequest(request: Request, env: CloudflareEnv, ctx: ExecutionContext): Promise<Response>;
 
-  protected abstract onScheduled(event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void>;
+  protected abstract onScheduled(event: ScheduledController, env: CloudflareEnv, ctx: ExecutionContext): Promise<void>;
 }
 
 export { AbstractEntrypointWorker };

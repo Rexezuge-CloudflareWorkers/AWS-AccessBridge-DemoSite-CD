@@ -1,6 +1,6 @@
 import { DurableObject } from 'cloudflare:workers';
 
-abstract class AbstractDurableObjectWorker extends DurableObject<Env> {
+abstract class AbstractDurableObjectWorker extends DurableObject<CloudflareEnv> {
   protected printExecId(): string {
     const execId: string = crypto.randomUUID();
     console.log('Durable Object Execution ID:', execId);

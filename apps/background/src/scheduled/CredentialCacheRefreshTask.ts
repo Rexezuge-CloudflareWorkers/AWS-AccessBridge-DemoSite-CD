@@ -1,6 +1,6 @@
-import { CredentialCacheConfigDAO, CredentialsCacheDAO, CredentialsDAO } from '@/dao';
-import { AssumeRoleUtil, TimestampUtil } from '@/utils';
-import { CredentialChain, CredentialCache, AccessKeys, AccessKeysWithExpiration } from '@/model';
+import { CredentialCacheConfigDAO, CredentialsCacheDAO, CredentialsDAO } from '@aws-access-bridge/backend-core/dao';
+import { AssumeRoleUtil, TimestampUtil } from '@aws-access-bridge/backend-core/utils';
+import { CredentialChain, CredentialCache, AccessKeys, AccessKeysWithExpiration } from '@aws-access-bridge/backend-core/model';
 import { IScheduledTask } from './IScheduledTask';
 import type { IEnv } from './IScheduledTask';
 import {
@@ -8,7 +8,7 @@ import {
   CREDENTIAL_REFRESH_INTERVAL_MINUTES,
   DEFAULT_PRINCIPAL_TRUST_CHAIN_LIMIT,
   NUMBER_OF_CREDENTIALS_TO_REFRESH,
-} from '@/constants';
+} from '@aws-access-bridge/backend-core/constants';
 
 class CredentialCacheRefreshTask extends IScheduledTask<CredentialCacheRefreshTaskEnv> {
   protected async handleScheduledTask(

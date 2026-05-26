@@ -1,10 +1,10 @@
-import { CredentialsDAO, CostDataDAO, DataCollectionConfigDAO } from '@/dao';
-import { AssumeRoleUtil, TimestampUtil, AwsApiUtil } from '@/utils';
-import type { CredentialChain, AccessKeys, AccessKeysWithExpiration, CostData } from '@/model';
+import { CredentialsDAO, CostDataDAO, DataCollectionConfigDAO } from '@aws-access-bridge/backend-core/dao';
+import { AssumeRoleUtil, TimestampUtil, AwsApiUtil } from '@aws-access-bridge/backend-core/utils';
+import type { CredentialChain, AccessKeys, AccessKeysWithExpiration, CostData } from '@aws-access-bridge/backend-core/model';
 import { IScheduledTask } from './IScheduledTask';
 import type { IEnv } from './IScheduledTask';
-import { DEFAULT_PRINCIPAL_TRUST_CHAIN_LIMIT } from '@/constants';
-import { ArnUtil } from '@/utils';
+import { DEFAULT_PRINCIPAL_TRUST_CHAIN_LIMIT } from '@aws-access-bridge/backend-core/constants';
+import { ArnUtil } from '@aws-access-bridge/backend-core/utils';
 
 const COST_COLLECTION_INTERVAL_HOURS: number = 6;
 const MAX_ACCOUNTS_PER_COLLECTION: number = 3;

@@ -1,10 +1,10 @@
-import { CredentialsDAO, DataCollectionConfigDAO, ResourceInventoryDAO } from '@/dao';
-import { AssumeRoleUtil, TimestampUtil, AwsApiUtil, ArnUtil } from '@/utils';
-import type { CredentialChain, AccessKeys, AccessKeysWithExpiration, ResourceInventoryItem } from '@/model';
-import type { ResourceDiscoveryItem } from '@/utils/AwsApiUtil';
+import { CredentialsDAO, DataCollectionConfigDAO, ResourceInventoryDAO } from '@aws-access-bridge/backend-core/dao';
+import { AssumeRoleUtil, TimestampUtil, AwsApiUtil, ArnUtil } from '@aws-access-bridge/backend-core/utils';
+import type { CredentialChain, AccessKeys, AccessKeysWithExpiration, ResourceInventoryItem } from '@aws-access-bridge/backend-core/model';
+import type { ResourceDiscoveryItem } from '@aws-access-bridge/backend-core/utils/AwsApiUtil';
 import { IScheduledTask } from './IScheduledTask';
 import type { IEnv } from './IScheduledTask';
-import { DEFAULT_PRINCIPAL_TRUST_CHAIN_LIMIT } from '@/constants';
+import { DEFAULT_PRINCIPAL_TRUST_CHAIN_LIMIT } from '@aws-access-bridge/backend-core/constants';
 
 const RESOURCE_COLLECTION_INTERVAL_HOURS: number = 2;
 const MAX_ACCOUNTS_PER_COLLECTION: number = 2;
