@@ -14,8 +14,8 @@ class ListResourcesRoute extends IActivityAPIRoute<ListResourcesRequest, ListRes
         name: 'type',
         in: 'query' as const,
         required: false,
-        description: 'Filter by resource type (e.g., ec2, s3, lambda, rds)',
-        schema: { type: 'string' as const, enum: ['ec2', 's3', 'lambda', 'rds'], example: 'ec2' },
+        description: 'Filter by resource type (e.g., ec2, s3, lambda, rds, dynamodb)',
+        schema: { type: 'string' as const, enum: ['ec2', 's3', 'lambda', 'rds', 'dynamodb'], example: 'ec2' },
       },
       {
         name: 'accountId',
@@ -70,6 +70,10 @@ class ListResourcesRoute extends IActivityAPIRoute<ListResourcesRequest, ListRes
                   },
                 },
                 total: { type: 'integer' as const, description: 'Total number of resources matching the filters' },
+                rolesByAccount: {
+                  type: 'object' as const,
+                  description: 'Assumable role names keyed by AWS account ID for opening resources in the console',
+                },
               },
             },
             examples: {
@@ -88,11 +92,12 @@ class ListResourcesRoute extends IActivityAPIRoute<ListResourcesRequest, ListRes
                     },
                   ],
                   total: 12,
+                  rolesByAccount: { '123456789012': ['DeveloperRole'] },
                 },
               },
               'empty-results': {
                 summary: 'No resources match the filters',
-                value: { items: [], total: 0 },
+                value: { items: [], total: 0, rolesByAccount: {} },
               },
             },
           },
@@ -160,8 +165,16 @@ class ListResourcesRoute extends IActivityAPIRoute<ListResourcesRequest, ListRes
       Math.min(parseInt(url.searchParams.get('limit') || '50'), 200),
       Math.max(parseInt(url.searchParams.get('offset') || '0'), 0),
     );
+    const rolesByAccountEntries: Array<[string, string[]]> = await Promise.all(
+      accountIds.map(
+        async (accountId): Promise<[string, string[]]> => [
+          accountId,
+          await assumableRolesDAO.getRolesByUserAndAccount(userEmail, accountId),
+        ],
+      ),
+    );
 
-    return { items, total };
+    return { items, total, rolesByAccount: Object.fromEntries(rolesByAccountEntries) };
   }
 }
 
@@ -169,6 +182,7 @@ type ListResourcesRequest = IRequest;
 interface ListResourcesResponse extends IResponse {
   items: ResourceInventoryItem[];
   total: number;
+  rolesByAccount: Record<string, string[]>;
 }
 
 export { ListResourcesRoute };
