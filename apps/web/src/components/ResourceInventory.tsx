@@ -18,12 +18,46 @@ interface ResourceSummary {
   byAccount: Record<string, Record<string, number>>;
 }
 
-const TYPE_LABELS: Record<string, string> = { ec2: 'EC2 Instances', s3: 'S3 Buckets', lambda: 'Lambda Functions', rds: 'RDS Databases' };
+interface ConsoleDestination {
+  path: string;
+  region?: string;
+}
+
+const TYPE_LABELS: Record<string, string> = {
+  ec2: 'EC2 Instances',
+  s3: 'S3 Buckets',
+  lambda: 'Lambda Functions',
+  rds: 'RDS Databases',
+  dynamodb: 'DynamoDB Tables',
+};
+
+const getConsoleDestination = (resource: ResourceItem): ConsoleDestination | null => {
+  const region: string | undefined = resource.region && resource.region !== 'global' ? resource.region : undefined;
+  switch (resource.resourceType) {
+    case 'ec2':
+      return { path: `ec2/home#InstanceDetails:instanceId=${encodeURIComponent(resource.resourceId)}`, region };
+    case 's3':
+      return { path: `s3/buckets/${encodeURIComponent(resource.resourceName || resource.resourceId)}`, region };
+    case 'lambda':
+      return { path: `lambda/home#/functions/${encodeURIComponent(resource.resourceName || resource.resourceId)}`, region };
+    case 'rds':
+      return { path: `rds/home#database:id=${encodeURIComponent(resource.resourceId)};is-cluster=false`, region };
+    case 'dynamodb':
+      return {
+        path: `dynamodbv2/home#table?name=${encodeURIComponent(resource.resourceName || resource.resourceId.split(':').pop() || resource.resourceId)}`,
+        region,
+      };
+    default:
+      return null;
+  }
+};
 
 export default function ResourceInventory() {
   const [summary, setSummary] = useState<ResourceSummary | null>(null);
   const [resources, setResources] = useState<ResourceItem[]>([]);
   const [total, setTotal] = useState(0);
+  const [rolesByAccount, setRolesByAccount] = useState<Record<string, string[]>>({});
+  const [selectedRoles, setSelectedRoles] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [filterType, setFilterType] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,9 +83,19 @@ export default function ResourceInventory() {
     try {
       const res = await fetch(`/api/resources?${params.toString()}`);
       if (res.ok) {
-        const data = (await res.json()) as { items: ResourceItem[]; total: number };
+        const data = (await res.json()) as { items: ResourceItem[]; total: number; rolesByAccount: Record<string, string[]> };
         setResources(data.items);
         setTotal(data.total);
+        setRolesByAccount(data.rolesByAccount || {});
+        setSelectedRoles((previous) => {
+          const next: Record<string, string> = { ...previous };
+          for (const [accountId, roles] of Object.entries(data.rolesByAccount || {})) {
+            if (roles.length > 0 && (!next[accountId] || !roles.includes(next[accountId]))) {
+              next[accountId] = roles[0];
+            }
+          }
+          return next;
+        });
       }
     } finally {
       setIsLoading(false);
@@ -67,6 +111,22 @@ export default function ResourceInventory() {
     if (['running', 'active', 'Active', 'available'].includes(state)) return '#4ade80';
     if (['stopped', 'inactive'].includes(state)) return '#f87171';
     return '#facc15';
+  };
+
+  const handleOpenResource = (resource: ResourceItem) => {
+    const role: string | undefined = selectedRoles[resource.awsAccountId] || rolesByAccount[resource.awsAccountId]?.[0];
+    const destination: ConsoleDestination | null = getConsoleDestination(resource);
+    if (!role || !destination) return;
+
+    const params = new URLSearchParams({
+      awsAccountId: resource.awsAccountId,
+      role,
+      destinationPath: destination.path,
+    });
+    if (destination.region) {
+      params.set('destinationRegion', destination.region);
+    }
+    window.open(`/api/aws/federate?${params.toString()}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -153,6 +213,7 @@ export default function ResourceInventory() {
             <option value="s3">S3</option>
             <option value="lambda">Lambda</option>
             <option value="rds">RDS</option>
+            <option value="dynamodb">DynamoDB</option>
           </select>
         </div>
         <div style={{ flex: 1, minWidth: '200px' }}>
@@ -234,10 +295,10 @@ export default function ResourceInventory() {
           style={{
             background: '#1e2433',
             borderRadius: '12px',
-            overflow: 'hidden',
+            overflowX: 'auto',
           }}
         >
-          <table className="text-sm" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="text-sm" style={{ width: '100%', minWidth: '940px', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <th
@@ -270,34 +331,102 @@ export default function ResourceInventory() {
                 >
                   State
                 </th>
+                <th
+                  className="text-xs uppercase tracking-wider font-medium"
+                  style={{ textAlign: 'left', padding: '12px', color: '#9ca3af', background: '#252d3d' }}
+                >
+                  Open
+                </th>
               </tr>
             </thead>
             <tbody>
-              {resources.map((r, idx) => (
-                <tr
-                  key={`${r.awsAccountId}-${r.resourceType}-${r.resourceId}`}
-                  style={{
-                    borderTop: idx === 0 ? 'none' : '1px solid #2d3748',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = '#252d3d';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = 'transparent';
-                  }}
-                >
-                  <td className="font-medium uppercase text-xs" style={{ padding: '12px', color: '#d1d5db' }}>
-                    {r.resourceType}
-                  </td>
-                  <td style={{ padding: '12px', color: '#fff' }}>{r.resourceName}</td>
-                  <td className="font-mono text-xs" style={{ padding: '12px', color: '#9ca3af' }}>
-                    {r.awsAccountId}
-                  </td>
-                  <td style={{ padding: '12px', color: '#9ca3af' }}>{r.region}</td>
-                  <td style={{ padding: '12px', color: stateColor(r.state) }}>{r.state}</td>
-                </tr>
-              ))}
+              {resources.map((r, idx) => {
+                const accountRoles: string[] = rolesByAccount[r.awsAccountId] || [];
+                const selectedRole: string = selectedRoles[r.awsAccountId] || accountRoles[0] || '';
+                const canOpen: boolean = Boolean(selectedRole && getConsoleDestination(r));
+                return (
+                  <tr
+                    key={`${r.awsAccountId}-${r.resourceType}-${r.resourceId}`}
+                    style={{
+                      borderTop: idx === 0 ? 'none' : '1px solid #2d3748',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = '#252d3d';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                    }}
+                  >
+                    <td className="font-medium uppercase text-xs" style={{ padding: '12px', color: '#d1d5db' }}>
+                      {r.resourceType}
+                    </td>
+                    <td style={{ padding: '12px', color: '#fff' }}>{r.resourceName}</td>
+                    <td className="font-mono text-xs" style={{ padding: '12px', color: '#9ca3af' }}>
+                      {r.awsAccountId}
+                    </td>
+                    <td style={{ padding: '12px', color: '#9ca3af' }}>{r.region}</td>
+                    <td style={{ padding: '12px', color: stateColor(r.state) }}>{r.state}</td>
+                    <td style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select
+                          value={selectedRole}
+                          disabled={accountRoles.length === 0}
+                          onChange={(e) => setSelectedRoles((previous) => ({ ...previous, [r.awsAccountId]: e.target.value }))}
+                          className="text-xs"
+                          aria-label={`Role for ${r.resourceName || r.resourceId}`}
+                          style={{
+                            maxWidth: '150px',
+                            padding: '7px 8px',
+                            background: '#111827',
+                            borderRadius: '8px',
+                            border: '1px solid #374151',
+                            color: '#e5e7eb',
+                            outline: 'none',
+                            opacity: accountRoles.length === 0 ? 0.45 : 1,
+                          }}
+                        >
+                          {accountRoles.length === 0 ? (
+                            <option value="">No role</option>
+                          ) : (
+                            accountRoles.map((role) => (
+                              <option key={role} value={role}>
+                                {role}
+                              </option>
+                            ))
+                          )}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenResource(r)}
+                          disabled={!canOpen}
+                          className="text-xs font-medium"
+                          title={canOpen ? 'Open resource in AWS Console' : 'No console destination available'}
+                          style={{
+                            padding: '8px 12px',
+                            background: canOpen ? '#2563eb' : '#374151',
+                            borderRadius: '8px',
+                            border: 'none',
+                            color: '#fff',
+                            cursor: canOpen ? 'pointer' : 'default',
+                            opacity: canOpen ? 1 : 0.5,
+                            whiteSpace: 'nowrap',
+                            transition: 'background 0.15s',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (canOpen) (e.currentTarget as HTMLElement).style.background = '#1d4ed8';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.background = canOpen ? '#2563eb' : '#374151';
+                          }}
+                        >
+                          Open
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

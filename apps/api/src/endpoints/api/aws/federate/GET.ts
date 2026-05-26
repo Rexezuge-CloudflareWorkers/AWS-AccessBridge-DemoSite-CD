@@ -35,6 +35,26 @@ class FederateRoute extends IActivityAPIRoute<FederateRequest, FederateResponse,
           example: 'DeveloperRole',
         },
       },
+      {
+        name: 'destinationPath',
+        in: 'query' as const,
+        required: false,
+        schema: {
+          type: 'string' as const,
+          description: 'Optional AWS Console path to redirect to after role assumption',
+          example: 'ec2/home#InstanceDetails:instanceId=i-0abc123def456789',
+        },
+      },
+      {
+        name: 'destinationRegion',
+        in: 'query' as const,
+        required: false,
+        schema: {
+          type: 'string' as const,
+          description: 'Optional AWS region to set in the destination URL',
+          example: 'us-east-1',
+        },
+      },
     ],
     responses: {
       '302': {
@@ -171,6 +191,8 @@ class FederateRoute extends IActivityAPIRoute<FederateRequest, FederateResponse,
     const url: URL = new URL(request.raw.url);
     const awsAccountId: string | null = url.searchParams.get('awsAccountId');
     const roleName: string | null = url.searchParams.get('role');
+    const destinationPath: string | null = url.searchParams.get('destinationPath');
+    const destinationRegion: string | null = url.searchParams.get('destinationRegion');
     if (!awsAccountId || !roleName) {
       throw new BadRequestError('Missing required query parameters.');
     }
@@ -198,8 +220,8 @@ class FederateRoute extends IActivityAPIRoute<FederateRequest, FederateResponse,
       sessionToken: credentials.sessionToken,
       awsAccountId: awsAccountId,
       roleName: roleName,
-      destinationPath: roleConfig?.destinationPath,
-      destinationRegion: roleConfig?.destinationRegion,
+      destinationPath: destinationPath || roleConfig?.destinationPath,
+      destinationRegion: destinationRegion || roleConfig?.destinationRegion,
     };
     const consoleResponse: Response = await internalRequestHelper.makeRequest(
       '/api/aws/console',
