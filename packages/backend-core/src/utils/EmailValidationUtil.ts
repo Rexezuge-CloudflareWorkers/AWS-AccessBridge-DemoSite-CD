@@ -27,7 +27,11 @@ class EmailValidationUtil {
       throw new UnauthorizedError('Missing required JWT verification configuration.');
     }
 
-    const normalizedTeamDomain: string = teamDomain.replace(/\/+$/, '');
+    let normalizedTeamDomainEnd: number = teamDomain.length;
+    while (normalizedTeamDomainEnd > 0 && teamDomain.charAt(normalizedTeamDomainEnd - 1) === '/') {
+      normalizedTeamDomainEnd -= 1;
+    }
+    const normalizedTeamDomain: string = teamDomain.slice(0, normalizedTeamDomainEnd);
     const normalizedPolicyAud: string = policyAud.trim();
     if (!normalizedPolicyAud) {
       throw new UnauthorizedError('Missing required JWT verification configuration.');
